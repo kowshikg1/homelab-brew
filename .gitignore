@@ -1,0 +1,40 @@
+# General system files
+*.log
+*.tmp
+*.swp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Secrets & environment files
+*.env
+*.env.*
+secrets/
+**/secrets/
+**/credentials.json
+*.key
+*.pem
+id_rsa
+id_rsa.pub
+
+# Backup archives and dumps
+*.tar
+*.tar.gz
+*.zip
+*.gz
+*.7z
+*.bak
+backups/
+**/backups/
+
+# Python
+__pycache__/
+*.pyc
+
+# Temporary tooling files
+.cache/
+tmp/
+
+# Temporary files
+tmp/
+temp/
