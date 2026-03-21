@@ -7,6 +7,7 @@
 Thumbs.db
 
 # Secrets & environment files
+.venv/
 *.env
 *.env.*
 secrets/
@@ -38,3 +39,8 @@ tmp/
 # Temporary files
 tmp/
 temp/
+
+#database files
+*.db
+*.sqlite
+*.sqlite3
