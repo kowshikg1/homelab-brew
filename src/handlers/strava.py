@@ -5,6 +5,9 @@ import requests
 
 from src.handlers.base_handler import BaseIngestionHandler
 from src.handlers.env_manager import EnvManager
+from src.utils.log_util import get_logger
+
+log=get_logger(__name__)
 
 class StravaConfig(Enum):
     """Strava configuration"""
@@ -17,7 +20,7 @@ class StravaConfig(Enum):
 
 class Strava(BaseIngestionHandler):
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(load_env=True)
         self.base_url = "https://www.strava.com/api/v3"
     
     @lazy
@@ -26,7 +29,7 @@ class Strava(BaseIngestionHandler):
         expires_at = self.env_manager.get(StravaConfig.STRAVA_EXPIRES_AT.value)
 
         if expires_at and current_timestamp >= float(expires_at):
-            refresh_token = self.refresh_token()
+            refresh_token = self.refresh_token
             client_id = self.env_manager.get(StravaConfig.STRAVA_CLIENT_ID.value)
             client_secret = self.env_manager.get(StravaConfig.STRAVA_CLIENT_SECRET.value)
 
@@ -89,6 +92,5 @@ if __name__ == "__main__":
     strava = Strava()
     activities = strava.get_activities(last_mtime=last_mtime)
     db_handler.insert_data("strava_activities", activities)
-    print("Strava Ingestion complete.")
-    #TODO: Add error handling, logging logic.
+    log.info(f"Ingestion Success. Fetched {len(activities)} activities")
 

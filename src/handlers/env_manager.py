@@ -1,4 +1,8 @@
-import os 
+import os
+
+from src.utils.log_util import get_logger
+
+log = get_logger(__name__)
 
 class EnvManager:
     """A simple environment variable manager that reads from and writes to a .env file."""
@@ -13,7 +17,7 @@ class EnvManager:
         Load environment variables from the .env file into a dictionary.
         """
         if not os.path.exists(self.env_file):
-            print(f"Warning: {self.env_file} not found. No environment variables loaded.")
+            log.warning(f"{self.env_file} not found. No environment variables loaded.")
             return
         
         with open(self.env_file, 'r') as f:
