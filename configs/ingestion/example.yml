@@ -1,0 +1,21 @@
+INGESTION_JOB_NAME:
+  description: Name of the ingestion process
+  is_active: true # Set to false to disable this ingestion(default: true)
+  send_notification: false # Set to true to send notification after each ingestion(default: false)
+  failure_notification: true # Set to true to send notification on ingestion failure(default: true)
+  handler: name # Name of the handler to use for this ingestion
+  extract_method: function_name # Function name to call for this ingestion
+  extract_mode: INCR # either INCR or HIST (default: INCR)
+  last_mtime: "2020-01-01T00:00:00" # Optional parameter to specify the last modified time for incremental ingestion, only applicable when extract_mode is INCR.
+  publish_mode: APPEND # either UPSERT or APPEND (default: APPEND)
+  extract_init: # Optional parameters for constructing the handler instance, these will be passed as kwargs to the handler class constructor.
+    param1: value1
+    param2: value2
+  extract_params: # Optional parameters for the extract method, these will be passed as kwargs to the extract method.
+    param1: value1
+    param2: value2
+  schedule: 0 0 * * * # Cron schedule for the ingestion
+  database: database_name # Database name to use for this ingestion(default: ingestions)
+  table: table_name # Table name to use for this ingestion
+  id_config_col: col_name # Column name to use as unique identifier for upsert operations, only applicable when publish_mode is UPSERT.(currently only support one column)
+  watermark_col: col_name # Optional but good to have for incremental ingestion. max(watermark_col)) will be used as the new watermark after each ingestion.

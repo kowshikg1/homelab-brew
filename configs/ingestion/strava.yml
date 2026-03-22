@@ -1,0 +1,8 @@
+RAW_STRAVA_ACTIVITIES:
+  description: Ingestion job for raw strava activities data
+  is_active: true
+  handler: strava
+  extract_method: get_activities
+  schedule: 5 2 * * *
+  table: strava_activities
+  watermark_col: start_date

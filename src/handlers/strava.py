@@ -1,13 +1,14 @@
+import requests
+
 from datetime import datetime, UTC
 from enum import Enum
 from lazy import lazy
-import requests
+from pathlib import Path
 
-from src.handlers.base_handler import BaseIngestionHandler
 from src.handlers.env_manager import EnvManager
 from src.utils.log_util import get_logger
 
-log=get_logger(__name__)
+log=get_logger(Path(__file__).stem)
 
 class StravaConfig(Enum):
     """Strava configuration"""
@@ -18,9 +19,9 @@ class StravaConfig(Enum):
     STRAVA_EXPIRES_AT="STRAVA_EXPIRES_AT"
 
 
-class Strava(BaseIngestionHandler):
+class Strava():
     def __init__(self) -> None:
-        super().__init__(load_env=True)
+        self.env_manager = EnvManager(Path("./src/handlers/.env"))
         self.base_url = "https://www.strava.com/api/v3"
     
     @lazy

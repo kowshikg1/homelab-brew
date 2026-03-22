@@ -1,10 +1,13 @@
 import sqlite3
 from pathlib import Path
-import json
 from lazy import lazy
 import pandas as pd
 
+from src.utils.log_util import get_logger
+from src.utils.commons import to_text
+
 DEFAULT_DTYPE = "TEXT"
+log = get_logger(Path(__file__).stem)
 
 class SQLiteHandler:
     def __init__(self, db_path: str = "data.db") -> None:
@@ -24,6 +27,14 @@ class SQLiteHandler:
             return cursor.fetchall()
 
     def create_table(self, table_name: str, columns: dict, pkey: str = None, auto_alter: bool = False,) -> None:
+        """
+        :param pkey: The column name to set as PRIMARY KEY (optional).
+        :param auto_alter: If True, automatically add new columns if they don't exist (default: False).
+        """
+        if self.does_table_exist(table_name):
+            if auto_alter:
+                self.alter_table_add_column(table_name, pkey, columns[pkey],) if pkey else None
+            return
         if pkey and pkey in columns:
             columns_def = ", ".join([f"{col} {dtype}{' PRIMARY KEY' if col == pkey else ''}" for col, dtype in columns.items()])
         else:
@@ -43,6 +54,10 @@ class SQLiteHandler:
     
     def drop_table(self, table_name: str) -> None:
         query = f"DROP TABLE IF EXISTS {table_name}"
+        self.execute_query(query)
+    
+    def truncate_table(self, table_name: str) -> None:
+        query = f"DELETE FROM {table_name}"
         self.execute_query(query)
     
     def alter_table_add_column(self, table_name: str, column_name: str, dtype: str = DEFAULT_DTYPE) -> None:
@@ -66,11 +81,9 @@ class SQLiteHandler:
             data = data.to_dict(orient='records')
         
         if not data:
-            print("No data to insert.")
+            log.info("No data to insert.")
             return
-        
-        self.create_table(table_name, {key: DEFAULT_DTYPE for key in data[0].keys()})
-        
+
         columns = data[0].keys()
         placeholders = ", ".join(["?"] * len(columns))
         query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
@@ -78,31 +91,22 @@ class SQLiteHandler:
         with self.connect as conn:
             cursor = conn.cursor()
             for row in data:
-                values = tuple(
-                    json.dumps(row.get(col), default=str) if isinstance(row.get(col), (dict, list, tuple)) else row.get(col)
-                    for col in columns
-                )
+                values = tuple(to_text(row.get(col)) for col in columns)
                 cursor.execute(query, values)
             conn.commit()
 
     def upsert_data(self, table_name: str, data: list[dict] | pd.DataFrame, unique_key: str) -> None:
         """Upsert data into the specified table based on a unique key.
-        
-        :param table_name: The name of the table to upsert data into.
-        :param data: A list of dictionaries or a pandas DataFrame containing the data to upsert.
-        :param unique_key: The column name that serves as the unique key for conflict resolution.
 
-        :return: None
+        :param unique_key: The column name that serves as the unique key for conflict resolution.
         """
 
         if isinstance(data, pd.DataFrame):
             data = data.to_dict(orient='records')
         
         if not data:
-            print("No data to upsert.")
+            log.info("No data to upsert.")
             return
-
-        self.create_table(table_name, {key: DEFAULT_DTYPE for key in data[0].keys()}, pkey=unique_key)
         
         columns = data[0].keys()
         placeholders = ", ".join(["?"] * len(columns))
@@ -116,10 +120,7 @@ class SQLiteHandler:
         with self.connect as conn:
             cursor = conn.cursor()
             for row in data:
-                values = tuple(
-                    json.dumps(row.get(col), default=str) if isinstance(row.get(col), (dict, list, tuple)) else row.get(col)
-                    for col in columns
-                )
+                values = tuple(to_text(row.get(col)) for col in columns)
                 cursor.execute(query, values)
             conn.commit()
 

@@ -44,3 +44,6 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+#Config files
+configs/ingestion_config.json

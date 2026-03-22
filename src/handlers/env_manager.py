@@ -1,8 +1,9 @@
 import os
 
+from pathlib import Path
 from src.utils.log_util import get_logger
 
-log = get_logger(__name__)
+log = get_logger(Path(__file__).stem)
 
 class EnvManager:
     """A simple environment variable manager that reads from and writes to a .env file."""
