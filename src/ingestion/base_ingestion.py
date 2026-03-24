@@ -8,6 +8,7 @@ from typing import Any
 from src.utils.commons import load_yaml
 from src.handlers.sqlite import SQLiteHandler
 from src.ingestion.ingestion_map import get_handler_class
+from src.utils.decorator_utils import telegram_alert, timeout
 from src.utils.log_util import get_logger
 
 log = get_logger(Path(__file__).stem)
@@ -68,6 +69,8 @@ def insert_data_to_db(job: BaseIngestion, data) -> None:
     else:
         raise ValueError(f"Unsupported publish mode: {job.publish_mode} and extract mode: {job.extract_mode} combination.")
 
+@telegram_alert(alert_level="error")
+@timeout(seconds=300)
 def run(job_name):
     config = load_yaml(INGESTION_CONGIG_PATH).get(job_name, None)
     if not config:
@@ -84,7 +87,6 @@ def run(job_name):
         job.extract_params['last_mtime'] = job.last_mtime
     data = extract_function(**job.extract_params)
     insert_data_to_db(job, data)
-    #TODO: Add notification logic.
     log.info(f"Ingestion job '{job_name}' completed successfully. Extracted {len(data)} records.")
 
 

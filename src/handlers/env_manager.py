@@ -18,7 +18,7 @@ class EnvManager:
         Load environment variables from the .env file into a dictionary.
         """
         if not os.path.exists(self.env_file):
-            log.warning(f"{self.env_file} not found. No environment variables loaded.")
+            log.error(f"{self.env_file} not found. No environment variables loaded.")
             return
         
         with open(self.env_file, 'r') as f:
