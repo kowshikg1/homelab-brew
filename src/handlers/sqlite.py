@@ -4,13 +4,14 @@ from lazy import lazy
 import pandas as pd
 
 from src.utils.log_util import get_logger
+from src.utils.path_variables import DEFAULT_SQLITE_DB
 from src.utils.commons import to_text
 
 DEFAULT_DTYPE = "TEXT"
 log = get_logger(Path(__file__).stem)
 
 class SQLiteHandler:
-    def __init__(self, db_path: str = "data.db") -> None:
+    def __init__(self, db_path: str = DEFAULT_SQLITE_DB) -> None:
         self.db_path = db_path
 
     @lazy
@@ -125,7 +126,7 @@ class SQLiteHandler:
             conn.commit()
 
 if __name__ == "__main__":
-    db_handler = SQLiteHandler("ingestion.db")
+    db_handler = SQLiteHandler("./data/ingestion.db")
     # query = "PRAGMA table_info(strava_activities);"
     query = "SELECT * FROM strava_activities;"
     result = db_handler.execute_query(query)

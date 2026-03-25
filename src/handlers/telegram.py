@@ -3,14 +3,14 @@ import requests
 from pathlib import Path
 
 from src.handlers.env_manager import EnvManager
+from src.utils.path_variables import ENV_FILE_HANDLERS
 from src.utils.log_util import get_logger
 
 log = get_logger(Path(__file__).stem)
-ENV_FILE = Path("./src/handlers/.env")
 BASE_URL = "https://api.telegram.org"
 
 def send_message(message: str, chat_id: str = None) -> None:
-    env_manager = EnvManager(ENV_FILE)
+    env_manager = EnvManager(ENV_FILE_HANDLERS)
     bot_token = env_manager.get("TELEGRAM_BOT_TOKEN")
     chat_id = chat_id or env_manager.get("TELEGRAM_CHAT_ID")
 
@@ -27,7 +27,7 @@ def send_message(message: str, chat_id: str = None) -> None:
 
 
 def get_chat_id() -> str:
-    env_manager = EnvManager(ENV_FILE)
+    env_manager = EnvManager(ENV_FILE_HANDLERS)
     bot_token = env_manager.get("TELEGRAM_BOT_TOKEN")
     url = f"{BASE_URL}/bot{bot_token}/getUpdates"
     response = requests.get(url)

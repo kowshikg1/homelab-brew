@@ -5,14 +5,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from src.utils.commons import load_yaml
 from src.handlers.sqlite import SQLiteHandler
 from src.ingestion.ingestion_map import get_handler_class
 from src.utils.decorator_utils import telegram_alert, timeout
+from src.utils.commons import load_yaml
 from src.utils.log_util import get_logger
+from src.utils.path_variables import PATH_INGESTION_CONFIG, INGESTION_SQLITE_DB
 
 log = get_logger(Path(__file__).stem)
-INGESTION_CONGIG_PATH = Path("./configs/ingestion_config.json")
 
 class ExtractMode(Enum):
     INCR = "INCR"
@@ -51,7 +51,7 @@ class BaseIngestion:
 
 
 def insert_data_to_db(job: BaseIngestion, data) -> None:
-    sqlite_handler = SQLiteHandler(job.database)
+    sqlite_handler = SQLiteHandler(f'./data/{job.database}')
     if job.publish_mode == PublishMode.TRUNCATE.value:
         sqlite_handler.truncate_table(job.table)
 
@@ -72,14 +72,14 @@ def insert_data_to_db(job: BaseIngestion, data) -> None:
 @telegram_alert(alert_level="error")
 @timeout(seconds=300)
 def run(job_name):
-    config = load_yaml(INGESTION_CONGIG_PATH).get(job_name, None)
+    config = load_yaml(PATH_INGESTION_CONFIG).get(job_name, None)
     if not config:
         raise ValueError(f"Ingestion job '{job_name}' not found or not active.")
 
     job = BaseIngestion(**config)
     extract_function = getattr(job.handler_instance, job.extract_method)
     if not job.last_mtime and job.extract_mode == ExtractMode.INCR.value:
-        job.last_mtime = SQLiteHandler(job.database).get_last_mtime(
+        job.last_mtime = SQLiteHandler(f'./data/{job.database}').get_last_mtime(
             table_name=job.table,
             watermark_col=job.watermark_col,
         )

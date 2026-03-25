@@ -6,6 +6,7 @@ from lazy import lazy
 from pathlib import Path
 
 from src.handlers.env_manager import EnvManager
+from src.utils.path_variables import ENV_FILE_HANDLERS
 from src.utils.log_util import get_logger
 
 log=get_logger(Path(__file__).stem)
@@ -21,7 +22,7 @@ class StravaConfig(Enum):
 
 class Strava():
     def __init__(self) -> None:
-        self.env_manager = EnvManager(Path("./src/handlers/.env"))
+        self.env_manager = EnvManager(ENV_FILE_HANDLERS)
         self.base_url = "https://www.strava.com/api/v3"
     
     @lazy

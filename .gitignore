@@ -47,3 +47,6 @@ temp/
 
 #Config files
 configs/ingestion_config.json
+
+#Sandbox test files
+sandbox/
