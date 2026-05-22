@@ -1,5 +1,5 @@
 from pathlib import Path
-from src.utils.commons import load_yaml, save_json,
+from src.utils.commons import load_yaml, save_json
 from src.utils.path_variables import PATH_INGESTION_FOLDER, PATH_INGESTION_CONFIG
 
 def compile_ingestion():

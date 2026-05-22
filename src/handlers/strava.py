@@ -26,6 +26,10 @@ class Strava():
         self.base_url = "https://www.strava.com/api/v3"
     
     @lazy
+    def header(self):
+        return {"Authorization": f"Bearer {self.access_token}"}
+    
+    @lazy
     def access_token(self)  -> str:
         current_timestamp = datetime.now(UTC).timestamp()
         expires_at = self.env_manager.get(StravaConfig.STRAVA_EXPIRES_AT.value)
@@ -67,32 +71,77 @@ class Strava():
         """Get the list of activities"""
         last_mtime = datetime.fromisoformat(last_mtime.replace("Z", "+00:00")) if last_mtime else None
         epoch_time = int(last_mtime.timestamp()) if last_mtime else None
+        per_page = 50 #Could be up to 200
+        activities: list[dict] = []
+        page = 1
 
-        headers = {"Authorization": f"Bearer {self.access_token}"}
-        params = {
-            # "before": ,
-            "after": epoch_time,
-            # page: 1,
-            # "per_page": 200
+        while True:
+            params = {
+                # "before": ,
+                "after": epoch_time,
+                "page": page,
+                "per_page": per_page,
             }
-        res = requests.get(f"{self.base_url}/athlete/activities", headers=headers, params=params, timeout=60)
+            res = requests.get(f"{self.base_url}/athlete/activities", headers=self.header, params=params, timeout=60)
 
-        if res.status_code == 200:
-            return res.json()
-        else:
-            raise Exception(f"Failed to fetch activities: {res.status_code} - {res.text}")
+            if res.status_code != 200:
+                raise Exception(f"Failed to fetch activities: {res.status_code} - {res.text}")
+
+            page_activities = res.json()
+            if not page_activities:
+                break
+
+            activities.extend(page_activities)
+            if len(page_activities) < per_page:
+                break
+
+            page += 1
+
+        return activities
+    
+    def get_streams(self, activity_ids: list[int], keys: list[str]) -> dict:
+        """Get the streams for a specific activity"""
+        params = {"keys": ",".join(keys), "key_by_type": "true"}
+        streams: list[dict] = []
+        for activity_id in activity_ids:
+            res = requests.get(f"{self.base_url}/activities/{activity_id}/streams", headers=self.header, params=params, timeout=60)
+            if res.status_code == 200:
+                row = {"id": activity_id}
+                stream = res.json()
+                for key in keys:
+                    row[key] = stream.get(key)
+                streams.append(row)
+            else:
+                raise Exception(f"Failed to fetch streams for activity {activity_id}: {res.status_code} - {res.text}")
+        return streams
+
+    def get_streams_helper(self, last_mtime:str =None, keys: list[str] =None) -> list[dict]:
+        activities = self.get_activities(last_mtime=last_mtime)
+        if not activities:
+            return []
+        activity_ids = [activity['id'] for activity in activities]
+        start_dates = {activity['id']: activity['start_date'] for activity in activities}
+        streams = self.get_streams(
+            activity_ids, 
+            keys=keys or ["time", "latlng", "distance", "altitude", "velocity_smooth", 
+                "heartrate", "cadence", "watts", "temp", "moving", "grade_smooth"
+            ]
+        )
+        for stream in streams:
+            stream['start_date'] = start_dates.get(stream['id'])
+        return streams
 
 
 if __name__ == "__main__":
-    config = dict(
-        id_config_col = "id",
-        watermark_col = "start_date",
-    )
+    # config = dict(
+    #     id_config_col = "id",
+    #     watermark_col = "start_date",
+    # )
     import src.handlers.sqlite as sqlite
-    db_handler = sqlite.SQLiteHandler("ingestion.db")
-    last_mtime = db_handler.get_last_mtime("strava_activities", watermark_col=config["watermark_col"])
+    db_handler = sqlite.SQLiteHandler()
+    last_mtime = '2026-05-20T12:54:52Z'
     strava = Strava()
-    activities = strava.get_activities(last_mtime=last_mtime)
-    db_handler.insert_data("strava_activities", activities)
-    log.info(f"Ingestion Success. Fetched {len(activities)} activities")
+    streams = strava.get_streams_helper(last_mtime=last_mtime)
+    db_handler.insert_data("strava_streams", streams)
+    log.info(f"Ingestion Success. Fetched {len(streams)} streams")
 

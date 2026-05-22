@@ -7,7 +7,7 @@ INGESTION_JOB_NAME:
   extract_method: function_name # Function name to call for this ingestion
   extract_mode: INCR # either INCR or HIST (default: INCR)
   last_mtime: "2020-01-01T00:00:00" # Optional parameter to specify the last modified time for incremental ingestion, only applicable when extract_mode is INCR.
-  publish_mode: APPEND # either UPSERT or APPEND (default: APPEND)
+  publish_mode: APPEND # either UPSERT or APPEND (default: UPSERT)
   extract_init: # Optional parameters for constructing the handler instance, these will be passed as kwargs to the handler class constructor.
     param1: value1
     param2: value2
