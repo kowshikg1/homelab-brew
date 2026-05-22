@@ -4,14 +4,14 @@ from lazy import lazy
 import pandas as pd
 
 from src.utils.log_util import get_logger
-from src.utils.path_variables import DEFAULT_SQLITE_DB
+from src.utils.path_variables import INGESTION_SQLITE_DB
 from src.utils.commons import to_text
 
 DEFAULT_DTYPE = "TEXT"
 log = get_logger(Path(__file__).stem)
 
 class SQLiteHandler:
-    def __init__(self, db_path: str = DEFAULT_SQLITE_DB) -> None:
+    def __init__(self, db_path: str = INGESTION_SQLITE_DB) -> None:
         self.db_path = db_path
 
     @lazy
@@ -85,15 +85,14 @@ class SQLiteHandler:
             log.info("No data to insert.")
             return
 
-        columns = data[0].keys()
+        columns = sorted({k for row in data for k in row.keys()})
         placeholders = ", ".join(["?"] * len(columns))
         query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
+        values = [tuple(to_text(row.get(col)) for col in columns) for row in data]
         
         with self.connect as conn:
             cursor = conn.cursor()
-            for row in data:
-                values = tuple(to_text(row.get(col)) for col in columns)
-                cursor.execute(query, values)
+            cursor.executemany(query, values)
             conn.commit()
 
     def upsert_data(self, table_name: str, data: list[dict] | pd.DataFrame, unique_key: str) -> None:
@@ -109,7 +108,7 @@ class SQLiteHandler:
             log.info("No data to upsert.")
             return
         
-        columns = data[0].keys()
+        columns = sorted({k for row in data for k in row.keys()})
         placeholders = ", ".join(["?"] * len(columns))
         update_placeholders = ", ".join([f"{col}=excluded.{col}" for col in columns if col != unique_key])
         query = f"""
@@ -117,13 +116,17 @@ class SQLiteHandler:
             VALUES ({placeholders})
             ON CONFLICT({unique_key}) DO UPDATE SET {update_placeholders}
         """
+        values = [tuple(to_text(row.get(col)) for col in columns) for row in data]
         
         with self.connect as conn:
             cursor = conn.cursor()
-            for row in data:
-                values = tuple(to_text(row.get(col)) for col in columns)
-                cursor.execute(query, values)
+            cursor.executemany(query, values)
             conn.commit()
+    
+    def rows_updated_after(self, table_name: str, watermark_col: str, last_mtime: str, primary_key: str) -> list[str]:
+        query = f"SELECT {primary_key} FROM {table_name} WHERE {watermark_col} > ?"
+        result = self.execute_query(query, (last_mtime,))
+        return [row[0] for row in result] if result else []
 
 if __name__ == "__main__":
     db_handler = SQLiteHandler("./data/ingestion.db")

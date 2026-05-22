@@ -33,7 +33,7 @@ class BaseIngestion:
     extract_init: dict[str, Any] = field(default_factory=dict)
     extract_params: dict[str, Any] = field(default_factory=dict)
     extract_mode: ExtractMode = ExtractMode.INCR.value
-    publish_mode: PublishMode = PublishMode.APPEND.value
+    publish_mode: PublishMode = PublishMode.UPSERT.value
     last_mtime: str | int = None
     id_config_col: str = None
     watermark_col: str = None
