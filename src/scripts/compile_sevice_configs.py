@@ -70,6 +70,10 @@ def load_service_config(yaml_path: str, service):
 # sudo systemctl enable mqtt-telegram
 # sudo systemctl status mqtt-telegram
 # journalctl -u mqtt-telegram -f
+# ----- disable -----
+# sudo systemctl stop mqtt-telegram
+# sudo systemctl disable mqtt-telegram
+
 if __name__ == "__main__":
     config = load_service_config("./configs/services/mqtt_telegram.yml", "mqtt-telegram")
     print(config)
