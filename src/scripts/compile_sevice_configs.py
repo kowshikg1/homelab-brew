@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 
 from src.handlers.env_manager import EnvManager
-from src.utils.commons import load_yaml
+from src.utils.file import load_yaml
 
 env = EnvManager()
 

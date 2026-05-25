@@ -1,18 +1,20 @@
-RAW_STRAVA_ACTIVITIES:
-  description: Ingestion job for raw strava activities data
+base_strava: &base_strava
   is_active: true
   handler: strava
+  id_config_col: id
+  watermark_col: start_date
+
+RAW_STRAVA_ACTIVITIES:
+  <<: *base_strava
+  description: Ingestion job for raw strava activities data
   publish_mode: APPEND
   extract_method: get_activities
   schedule: 5 2 * * *
   table: strava_activities
-  id_config_col: id
-  watermark_col: start_date
 
 RAW_STRAVA_STREAMS:
+  <<: *base_strava
   description: Ingestion job for raw strava streams data
-  is_active: true
-  handler: strava
   extract_method: get_streams_helper
   extract_params:
     keys:
@@ -29,5 +31,3 @@ RAW_STRAVA_STREAMS:
       - grade_smooth
   schedule: 10 2 * * *
   table: strava_streams
-  id_config_col: id
-  watermark_col: start_date

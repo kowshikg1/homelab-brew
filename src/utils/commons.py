@@ -1,8 +1,8 @@
 import hashlib
 import json
-import yaml
 
 from collections import deque
+from datetime import datetime, UTC
 from typing import Any
 
 def hash_object(obj: Any, encoding: str = "utf-16") -> str:
@@ -31,14 +31,6 @@ def to_text(value: Any) -> str:
     else:
         return str(value)
 
-def load_json(file_path: str) -> Any:
-    with open(file_path, 'r') as f:
-        return json.load(f)
-
-def save_json(data: Any, file_path: str) -> None:
-    with open(file_path, 'w') as f:
-        json.dump(data, f, indent=4)
-
-def load_yaml(file_path: str, encoding='utf-8') -> Any:
-    with open(file_path, 'r', encoding=encoding) as f:
-        return yaml.safe_load(f)
+def current_timestamp(tz=UTC) -> int:
+    """Get the current epoch timestamp in seconds."""
+    return int(datetime.now(tz).timestamp())

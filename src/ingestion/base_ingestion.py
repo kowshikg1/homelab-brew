@@ -8,7 +8,7 @@ from typing import Any
 from src.handlers.sqlite import SQLiteHandler
 from src.ingestion.ingestion_map import get_handler_class
 from src.utils.decorator_utils import telegram_alert, timeout
-from src.utils.commons import load_yaml
+from src.utils.file import load_yaml
 from src.utils.log_util import get_logger
 from src.utils.path_variables import PATH_INGESTION_CONFIG, INGESTION_SQLITE_DB
 
@@ -86,6 +86,7 @@ def run(job_name):
     if job.last_mtime:
         job.extract_params['last_mtime'] = job.last_mtime
     data = extract_function(**job.extract_params)
+    #TODO: add extra meta columns like ingestion time, soft delete flag, etc.
     insert_data_to_db(job, data)
     log.info(f"Ingestion job '{job_name}' completed successfully. Extracted {len(data)} records.")
 

@@ -1,0 +1,31 @@
+base_youtube: &base_youtube
+  is_active: true
+  handler: youtube
+  extract_mode: HIST
+  publish_mode: UPSERT
+  id_config_col: id
+
+RAW_YOUTUBE_PLAYLISTS:
+  <<: *base_youtube
+  description: Ingestion job for raw youtube playlists data
+  extract_method: get_playlists
+  extract_params:
+    mine: true
+  table: youtube_playlists
+
+RAW_YOUTUBE_PLAYLIST_ITEMS:
+  <<: *base_youtube
+  description: Ingestion job for raw youtube playlist items data
+  extract_method: get_playlist_items_helper
+  extract_params:
+    playlist_ids:
+        - LL #Liked videos
+        - LM #Liked music
+        # - WL #Watch later - google depricated accessing this playlist, so not including it for now
+        - PLktEpJrBR-QmrkRUQ54VfjM8wkS5j5HQ2 #~LM
+        - PLktEpJrBR-QnOWhodijZNrx-Q9HOONaXB #BC
+        - PLktEpJrBR-QnOWhodijZNrx-Q9HOONaXB #</>
+        - PLktEpJrBR-Ql8EKsgqDglKtbqenkBVBrP #MC
+        - PLktEpJrBR-QlxQ00n5ssQspTMU1uEEs70 #❤️
+        - PLktEpJrBR-QlBn-SR8lSThppOj3DpiX8j #💥
+  table: youtube_playlist_items

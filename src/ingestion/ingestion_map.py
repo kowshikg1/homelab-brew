@@ -4,10 +4,12 @@
 from src.handlers.env_manager import EnvManager
 from src.handlers.strava import Strava
 from src.handlers.sqlite import SQLiteHandler
+from src.handlers.youtube import Youtube
 
 INGESTION_MAP = {
     "strava": Strava,
     "sqlite": SQLiteHandler,
+    "youtube": Youtube
 }
 
 def get_handler_class(handler_name: str):
