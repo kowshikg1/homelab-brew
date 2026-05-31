@@ -64,7 +64,7 @@ class Youtube(BaseAPI):
 
     def get_playlist_ids(self, channel_ids: list[str]=[], mine: bool = False) -> list[str]:
         """Get the playlist ids for a list of channel ids"""
-        if mine and channel_ids: return []
+        if not mine and not channel_ids: return []
         playlist_ids = []
         if mine:
             playlists = self.get_playlists(mine=True)
@@ -113,7 +113,6 @@ class Youtube(BaseAPI):
 if __name__ == "__main__":
     playlist_ids = ["PLktEpJrBR-QmLlnjbx5cDmWSTxf0ZQa3c",
     "PLktEpJrBR-Ql7f9VBZN3C-De1eNjAzcS8", "PLktEpJrBR-Ql2KbrSVubie-4TaDKAp_Aa"]
-    items = Youtube().get_playlist_ids( mine=True)
     with open("sandbox/output.json", "w") as f:
         import json
         json.dump(items, f, indent=4)

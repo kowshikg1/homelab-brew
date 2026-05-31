@@ -26,6 +26,11 @@ class SQLiteHandler:
             else:
                 cursor.execute(query)
             return cursor.fetchall()
+    def alter_table(self, table_name: str, columns: dict) -> None:
+        existing_columns = self.get_table_columns(table_name)
+        for col, dtype in columns.items():
+            if col not in existing_columns:
+                self.add_column(table_name, col, dtype)
 
     def create_table(self, table_name: str, columns: dict, pkey: str = None, auto_alter: bool = False,) -> None:
         """
@@ -34,7 +39,7 @@ class SQLiteHandler:
         """
         if self.does_table_exist(table_name):
             if auto_alter:
-                self.alter_table_add_column(table_name, pkey, columns[pkey],) if pkey else None
+                self.alter_table(table_name, columns)
             return
         if pkey and pkey in columns:
             columns_def = ", ".join([f"{col} {dtype}{' PRIMARY KEY' if col == pkey else ''}" for col, dtype in columns.items()])
@@ -42,11 +47,6 @@ class SQLiteHandler:
             columns_def = ", ".join([f"{col} {dtype}" for col, dtype in columns.items()])
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_def})"
         self.execute_query(query)
-        if auto_alter:
-            existing_columns = self.get_table_columns(table_name)
-            for col, dtype in columns.items():
-                if col not in existing_columns:
-                    self.alter_table_add_column(table_name, col, dtype)
     
     def does_table_exist(self, table_name: str) -> bool:
         query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'"
@@ -61,7 +61,7 @@ class SQLiteHandler:
         query = f"DELETE FROM {table_name}"
         self.execute_query(query)
     
-    def alter_table_add_column(self, table_name: str, column_name: str, dtype: str = DEFAULT_DTYPE) -> None:
+    def add_column(self, table_name: str, column_name: str, dtype: str = DEFAULT_DTYPE) -> None:
         query = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {dtype}"
         self.execute_query(query)
     
@@ -122,11 +122,7 @@ class SQLiteHandler:
             cursor = conn.cursor()
             cursor.executemany(query, values)
             conn.commit()
-    
-    def rows_updated_after(self, table_name: str, watermark_col: str, last_mtime: str, primary_key: str) -> list[str]:
-        query = f"SELECT {primary_key} FROM {table_name} WHERE {watermark_col} > ?"
-        result = self.execute_query(query, (last_mtime,))
-        return [row[0] for row in result] if result else []
+
 
 if __name__ == "__main__":
     db_handler = SQLiteHandler("./data/ingestion.db")

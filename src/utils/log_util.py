@@ -20,7 +20,7 @@ def get_logger(name: str, log_file: str = None) -> logging.Logger:
         log = get_logger(__name__, "logs/app.log")
     """
     logger = logging.getLogger(name)
-    if not logger.hasHandlers():
+    if not logger.handlers:
         logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         
@@ -28,9 +28,20 @@ def get_logger(name: str, log_file: str = None) -> logging.Logger:
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         
-        if log_file:
-            log_path = Path(log_file)
-            log_path.parent.mkdir(parents=True, exist_ok=True)
+    if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        resolved_log_path = str(log_path.resolve())
+
+        # Avoid duplicate file handlers for the same destination.
+        has_same_file_handler = any(
+            isinstance(handler, logging.FileHandler)
+            and Path(handler.baseFilename).resolve() == Path(resolved_log_path)
+            for handler in logger.handlers
+        )
+
+        if not has_same_file_handler:
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             file_handler = logging.FileHandler(log_path)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
