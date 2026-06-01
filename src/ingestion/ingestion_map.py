@@ -4,11 +4,13 @@
 from src.handlers.env_manager import EnvManager
 from src.handlers.strava import Strava
 from src.handlers.sqlite import SQLiteHandler
+from src.handlers.system_stats import SystemStats
 from src.handlers.youtube import Youtube
 
 INGESTION_MAP = {
     "strava": Strava,
     "sqlite": SQLiteHandler,
+    "system_stats": SystemStats,
     "youtube": Youtube
 }
 

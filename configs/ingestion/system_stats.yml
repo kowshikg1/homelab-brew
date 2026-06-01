@@ -1,0 +1,10 @@
+SYSTEM_STATS:
+  description: Collect CPU, memory, and network usage
+  is_active: true
+  handler: system_stats
+  extract_method: collect_stats
+  publish_mode: APPEND
+  extract_mode: HIST
+  schedule: "*/15 * * * *"
+  table: system_stats
+  database: ingestion.db
