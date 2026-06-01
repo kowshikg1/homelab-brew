@@ -1,0 +1,30 @@
+version: 1
+
+global:
+  mount_retry_count: 3
+  mount_retry_delay_sec: 4
+  docker_restart_timeout_sec: 20
+  continue_on_error: true
+
+disks:
+  - uuid: 76d4424d-660d-4b06-a01d-c2f70a71651d
+    enabled: true
+    mountpoint: "/media"
+    containers:
+      - jellyfin
+      - immich_server
+      - immich_redis
+      - immich_postgres
+      - immich_machine_learning
+    # images: []
+
+hdd-mount-recover:
+  description: HDD Mount Recovery and Docker Container Restart
+  after: local-fs.target docker.service
+  wants: docker.service
+  type: oneshot
+  user: root
+  exec_start_pre: /bin/sleep 60
+  exec_file: src/scripts/hdd_mount_recover.py
+  restart: "no"
+  wanted_by: multi-user.target

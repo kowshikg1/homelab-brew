@@ -18,6 +18,7 @@ class ServiceConfig:
     user: str = env.get("USER")
     project_path: str = env.get("PROJECT_PATH")
     venv_path: str = env.get("VENV_PATH")
+    exec_start_pre: str = None
     exec_module: str = None
     exec_file: str = None
     restart: str = "on-failure"
@@ -48,6 +49,7 @@ def load_service_config(yaml_path: str, service):
     Type={service.type}
     User={service.user}
     WorkingDirectory=/home/{service.user}/{service.project_path}
+    {f'ExecStartPre={service.exec_start_pre}' if service.exec_start_pre else ''}
     {f'ExecStart={service.venv_path}/bin/python -m {service.exec_module}' if service.exec_module else ''}
     {f'ExecStart={service.venv_path}/bin/python {service.exec_file}' if service.exec_file else ''}
 
@@ -75,5 +77,6 @@ def load_service_config(yaml_path: str, service):
 # sudo systemctl disable mqtt-telegram
 
 if __name__ == "__main__":
-    config = load_service_config("./configs/services/mqtt_telegram.yml", "mqtt-telegram")
-    print(config)
+    config = load_service_config("configs/services/hdd_mount_recover.yml", "hdd-mount-recover")
+    with open("./sandbox/output/output.service", "w") as f:
+        f.write(config)
