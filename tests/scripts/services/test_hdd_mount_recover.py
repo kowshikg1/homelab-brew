@@ -1,7 +1,7 @@
 import pytest
 
-from src.scripts.hdd_mount_recover import DiskMapping, GlobalConfig
-import src.scripts.hdd_mount_recover as module
+from src.scripts.services.hdd_mount_recover import DiskMapping, GlobalConfig
+import src.scripts.services.hdd_mount_recover as module
 
 
 def test_parse_mapping_valid(tmp_path):

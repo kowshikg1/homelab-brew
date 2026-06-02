@@ -8,3 +8,5 @@ SYSTEM_STATS:
   schedule: "*/15 * * * *"
   table: system_stats
   database: ingestion.db
+  logging:
+    append_log: false

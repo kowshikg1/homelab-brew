@@ -2,7 +2,7 @@ mqtt-telegram:
   description: MQTT Telegram Notifier
   after: network-online.target
   wants: network-online.target
-  exec_module: src.scripts.mqtt_telegram_notify
+  exec_module: src.scripts.services.mqtt_telegram_notify
   restart: always
   memory_max: 100M
   cpu_quota: 20%

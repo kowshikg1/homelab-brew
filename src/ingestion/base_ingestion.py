@@ -43,6 +43,7 @@ class BaseIngestion:
     description: str = ""
     is_active: bool = True
     schedule: str = None
+    logging: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         self.handler_class = get_handler_class(self.handler) if not self.handler_class else self.handler_class

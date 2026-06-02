@@ -47,6 +47,7 @@ temp/
 
 #Config files
 configs/ingestion_config.json
+configs/crontab_tasks/compiled.crontab
 
 #Sandbox test files
 sandbox/

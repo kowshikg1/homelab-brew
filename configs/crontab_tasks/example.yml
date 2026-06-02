@@ -1,0 +1,35 @@
+# General (non-ingestion) cron jobs.
+# Supported styles:
+# 1) command: single shell command (can include operators directly)
+# 2) commands + operator: join multiple commands using ;, &&, &, ||, |
+# 3) script (+ optional args): run a script file (python=true by default for *.py)
+
+example_job:
+  description: Example cron job that runs every hour
+  is_active: false
+  schedule: "0 * * * *"
+  command: echo "This is an example cron job"
+  logging:
+    append_log: false
+
+example_script_job:
+  description: Example cron job that runs a script every day at 2am
+  is_active: false
+  schedule: "0 2 * * *"
+  repo: /home/koushik/dev/homelab-brew
+  script: src/scripts/example_script.py
+  args:
+    - --example-arg value
+  logging:
+    log_file: example_script.log
+
+example_commands_job:
+  description: Example cron job that runs multiple commands every Sunday at 3am
+  is_active: false
+  schedule: "0 3 * * 0"
+  commands:
+    - echo "Running first command"
+    - echo "Running second command"
+  operator: "&&"
+  wrap_braces: true
+  extra_command: "|| echo \"$(date): Job failed\" >> example_commands.log"

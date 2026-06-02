@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from src.scripts.compile_ingestion_configs import compile_ingestion
+from src.scripts.configs.compile_ingestion_configs import compile_ingestion
 
 
 # ---------------------------------------------------------------------------
@@ -29,8 +29,8 @@ class TestCompileIngestion:
         )
         output_path = tmp_path / "ingestion_config.json"
 
-        with patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
-             patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
+        with patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
+             patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
             compile_ingestion()
 
         result = json.loads(output_path.read_text())
@@ -45,8 +45,8 @@ class TestCompileIngestion:
         )
         output_path = tmp_path / "ingestion_config.json"
 
-        with patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
-             patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
+        with patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
+             patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
             compile_ingestion()
 
         result = json.loads(output_path.read_text())
@@ -61,8 +61,8 @@ class TestCompileIngestion:
         )
         output_path = tmp_path / "ingestion_config.json"
 
-        with patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
-             patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
+        with patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
+             patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
             compile_ingestion()
 
         result = json.loads(output_path.read_text())
@@ -80,8 +80,8 @@ class TestCompileIngestion:
         )
         output_path = tmp_path / "ingestion_config.json"
 
-        with patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
-             patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
+        with patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
+             patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
             with pytest.raises(ValueError, match="Duplicate job name"):
                 compile_ingestion()
 
@@ -97,8 +97,8 @@ class TestCompileIngestion:
         )
         output_path = tmp_path / "ingestion_config.json"
 
-        with patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
-             patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
+        with patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
+             patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
             compile_ingestion()
 
         result = json.loads(output_path.read_text())
@@ -110,8 +110,8 @@ class TestCompileIngestion:
         ingestion_dir.mkdir()
         output_path = tmp_path / "ingestion_config.json"
 
-        with patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
-             patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
+        with patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
+             patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
             compile_ingestion()
 
         result = json.loads(output_path.read_text())
@@ -125,8 +125,8 @@ class TestCompileIngestion:
         )
         output_path = tmp_path / "ingestion_config.json"
 
-        with patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
-             patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
+        with patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
+             patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
             compile_ingestion()
 
         # Must not raise
@@ -140,8 +140,8 @@ class TestCompileIngestion:
         )
         output_path = tmp_path / "ingestion_config.json"
 
-        with patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
-             patch("src.scripts.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
+        with patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_FOLDER", ingestion_dir), \
+             patch("src.scripts.configs.compile_ingestion_configs.PATH_INGESTION_CONFIG", output_path):
             compile_ingestion()
 
         result = json.loads(output_path.read_text())

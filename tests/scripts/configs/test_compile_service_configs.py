@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
-from src.scripts.compile_sevice_configs import ServiceConfig, load_service_config
+from src.scripts.configs.compile_service_configs import ServiceConfig, load_service_config
 
 
 # ---------------------------------------------------------------------------
@@ -47,9 +47,9 @@ def mock_env_for_service_config(tmp_path):
         "VENV_PATH": "/home/testuser/.venv",
     }.get(key, default)
 
-    with patch("src.scripts.compile_sevice_configs.EnvManager", return_value=mock_mgr):
+    with patch("src.scripts.configs.compile_service_configs.EnvManager", return_value=mock_mgr):
         # Re-evaluate module-level `env` binding used in ServiceConfig defaults
-        import src.scripts.compile_sevice_configs as mod
+        import src.scripts.configs.compile_service_configs as mod
         mod.env = mock_mgr
         yield mock_mgr
 

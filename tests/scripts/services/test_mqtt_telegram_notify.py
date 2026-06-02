@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import patch, MagicMock, call
 
-from src.scripts.mqtt_telegram_notify import _build_mqtt_client, subscribed_topics
+from src.scripts.services.mqtt_telegram_notify import _build_mqtt_client, subscribed_topics
 
 
 # ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ def mock_env_manager():
     }
     mock_mgr = MagicMock()
     mock_mgr.get.side_effect = lambda key, default=None: env_values.get(key, default)
-    with patch("src.scripts.mqtt_telegram_notify.EnvManager", return_value=mock_mgr):
+    with patch("src.scripts.services.mqtt_telegram_notify.EnvManager", return_value=mock_mgr):
         yield mock_mgr
 
 
@@ -33,7 +33,7 @@ def mock_env_with_auth():
     }
     mock_mgr = MagicMock()
     mock_mgr.get.side_effect = lambda key, default=None: env_values.get(key, default)
-    with patch("src.scripts.mqtt_telegram_notify.EnvManager", return_value=mock_mgr):
+    with patch("src.scripts.services.mqtt_telegram_notify.EnvManager", return_value=mock_mgr):
         yield mock_mgr
 
 
@@ -62,49 +62,49 @@ class TestSubscribedTopics:
 class TestBuildMqttClient:
     def test_returns_mqtt_client(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             result = _build_mqtt_client()
         assert result is mock_client
 
     def test_connects_to_broker(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
         mock_client.connect.assert_called_once_with("localhost", 1883, 60)
 
     def test_connects_to_custom_broker(self, mock_env_with_auth):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
         mock_client.connect.assert_called_once_with("mqtt.example.com", 8883, 60)
 
     def test_sets_username_password_when_provided(self, mock_env_with_auth):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
         mock_client.username_pw_set.assert_called_once_with(username="user", password="pass")
 
     def test_no_username_password_when_not_provided(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
         mock_client.username_pw_set.assert_not_called()
 
     def test_on_connect_callback_set(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
         assert mock_client.on_connect is not None
 
     def test_on_message_callback_set(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
         assert mock_client.on_message is not None
 
     def test_on_disconnect_callback_set(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
         assert mock_client.on_disconnect is not None
 
@@ -117,13 +117,13 @@ class TestOnConnectCallback:
     def _get_on_connect(self, env_fixture_name, request):
         env = request.getfixturevalue(env_fixture_name)
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
         return mock_client.on_connect, mock_client
 
     def test_subscribes_to_all_topics_on_rc_0(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
 
         on_connect = mock_client.on_connect
@@ -135,7 +135,7 @@ class TestOnConnectCallback:
 
     def test_does_not_subscribe_on_nonzero_rc(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
 
         on_connect = mock_client.on_connect
@@ -151,8 +151,8 @@ class TestOnConnectCallback:
 class TestOnMessageCallback:
     def test_sends_telegram_message_on_mqtt_message(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client), \
-             patch("src.scripts.mqtt_telegram_notify.send_message") as mock_send:
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client), \
+             patch("src.scripts.services.mqtt_telegram_notify.send_message") as mock_send:
             _build_mqtt_client()
 
             on_message = mock_client.on_message
@@ -165,8 +165,8 @@ class TestOnMessageCallback:
 
     def test_telegram_message_contains_topic(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client), \
-             patch("src.scripts.mqtt_telegram_notify.send_message") as mock_send:
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client), \
+             patch("src.scripts.services.mqtt_telegram_notify.send_message") as mock_send:
             _build_mqtt_client()
 
             on_message = mock_client.on_message
@@ -179,8 +179,8 @@ class TestOnMessageCallback:
 
     def test_telegram_message_contains_payload(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client), \
-             patch("src.scripts.mqtt_telegram_notify.send_message") as mock_send:
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client), \
+             patch("src.scripts.services.mqtt_telegram_notify.send_message") as mock_send:
             _build_mqtt_client()
 
             on_message = mock_client.on_message
@@ -193,8 +193,8 @@ class TestOnMessageCallback:
 
     def test_decodes_payload_utf8_with_errors_replace(self, mock_env_manager):
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client), \
-             patch("src.scripts.mqtt_telegram_notify.send_message") as mock_send:
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client), \
+             patch("src.scripts.services.mqtt_telegram_notify.send_message") as mock_send:
             _build_mqtt_client()
 
             on_message = mock_client.on_message
@@ -215,7 +215,7 @@ class TestOnDisconnectCallback:
     def test_logs_warning_on_unexpected_disconnect(self, mock_env_manager, caplog):
         import logging
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
 
         on_disconnect = mock_client.on_disconnect
@@ -228,7 +228,7 @@ class TestOnDisconnectCallback:
     def test_logs_info_on_clean_disconnect(self, mock_env_manager, caplog):
         import logging
         mock_client = MagicMock()
-        with patch("src.scripts.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
+        with patch("src.scripts.services.mqtt_telegram_notify.mqtt.Client", return_value=mock_client):
             _build_mqtt_client()
 
         on_disconnect = mock_client.on_disconnect

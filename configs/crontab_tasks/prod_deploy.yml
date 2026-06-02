@@ -1,0 +1,14 @@
+#Clone and create a .venv in the prod repo before running this job for the first time.
+prod_deploy:
+  description: Pull latest changes from the prod repo
+  is_active: true
+  schedule: "0 0 * * *"
+  commands:
+    - git pull origin main
+    - .venv/bin/pip install -r requirements.txt
+    # - TODO: automate publishing/modifying services, crontab tasks and new ddl scripts
+    - "echo \"$(date): Pull completed\" >> logs/prod-deploy.log"
+  wrap_braces: true
+  extra_command: "|| echo \"$(date): Pull failed\" > logs/prod-deploy.log"
+  logging:
+    append_log: false #handled in the command

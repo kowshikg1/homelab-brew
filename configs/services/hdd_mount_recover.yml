@@ -25,6 +25,6 @@ hdd-mount-recover:
   type: oneshot
   user: root
   exec_start_pre: /bin/sleep 60
-  exec_file: src/scripts/hdd_mount_recover.py
+  exec_file: src/scripts/services/hdd_mount_recover.py
   restart: "no"
   wanted_by: multi-user.target
