@@ -1,50 +1,57 @@
 """Tests for src/ingestion/base_ingestion.py"""
+
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, call
 
 from src.ingestion.base_ingestion import (
+    BaseIngestion,
     ExtractMode,
     PublishMode,
-    BaseIngestion,
     insert_data_to_db,
     run,
 )
-
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class TestExtractMode:
     def test_incr_value(self):
-        assert ExtractMode.INCR.value == "INCR"
+        assert ExtractMode.INCR.value == 'INCR'
 
     def test_hist_value(self):
-        assert ExtractMode.HIST.value == "HIST"
+        assert ExtractMode.HIST.value == 'HIST'
 
     def test_enum_members(self):
-        assert set(e.value for e in ExtractMode) == {"INCR", "HIST"}
+        assert set(e.value for e in ExtractMode) == {'INCR', 'HIST'}
 
 
 class TestPublishMode:
     def test_upsert_value(self):
-        assert PublishMode.UPSERT.value == "UPSERT"
+        assert PublishMode.UPSERT.value == 'UPSERT'
 
     def test_append_value(self):
-        assert PublishMode.APPEND.value == "APPEND"
+        assert PublishMode.APPEND.value == 'APPEND'
 
     def test_truncate_value(self):
-        assert PublishMode.TRUNCATE.value == "TRUNCATE"
+        assert PublishMode.TRUNCATE.value == 'TRUNCATE'
 
     def test_enum_members(self):
-        assert set(e.value for e in PublishMode) == {"UPSERT", "APPEND", "TRUNCATE"}
+        assert set(e.value for e in PublishMode) == {
+            'UPSERT',
+            'APPEND',
+            'TRUNCATE',
+        }
 
 
 # ---------------------------------------------------------------------------
 # BaseIngestion
 # ---------------------------------------------------------------------------
 
-#TODO: Use generic tests instead of using strava
+
+# TODO: Use generic tests instead of using strava
 @pytest.fixture
 def mock_strava_class():
     """A mock handler class that can be instantiated."""
@@ -56,9 +63,9 @@ def mock_strava_class():
 class TestBaseIngestion:
     def _make_job(self, overrides=None, mock_handler_class=None):
         defaults = dict(
-            handler="strava",
-            extract_method="get_activities",
-            table="activities",
+            handler='strava',
+            extract_method='get_activities',
+            table='activities',
         )
         if overrides:
             defaults.update(overrides)
@@ -66,42 +73,60 @@ class TestBaseIngestion:
         if mock_handler_class is None:
             mock_handler_class = MagicMock()
 
-        with patch("src.ingestion.base_ingestion.get_handler_class", return_value=mock_handler_class):
+        with patch(
+            'src.ingestion.base_ingestion.get_handler_class',
+            return_value=mock_handler_class,
+        ):
             job = BaseIngestion(**defaults)
         return job, mock_handler_class
 
     def test_handler_class_set_from_handler_name(self):
         mock_cls = MagicMock()
-        with patch("src.ingestion.base_ingestion.get_handler_class", return_value=mock_cls) as mock_get:
-            job = BaseIngestion(handler="strava", extract_method="get_activities", table="t")
-        mock_get.assert_called_once_with("strava")
+        with patch(
+            'src.ingestion.base_ingestion.get_handler_class',
+            return_value=mock_cls,
+        ) as mock_get:
+            job = BaseIngestion(
+                handler='strava', extract_method='get_activities', table='t'
+            )
+        mock_get.assert_called_once_with('strava')
         assert job.handler_class is mock_cls
 
     def test_handler_instance_created(self):
         mock_instance = MagicMock()
         mock_cls = MagicMock(return_value=mock_instance)
-        with patch("src.ingestion.base_ingestion.get_handler_class", return_value=mock_cls):
-            job = BaseIngestion(handler="strava", extract_method="get_activities", table="t")
+        with patch(
+            'src.ingestion.base_ingestion.get_handler_class',
+            return_value=mock_cls,
+        ):
+            job = BaseIngestion(
+                handler='strava', extract_method='get_activities', table='t'
+            )
         assert job.handler_instance is mock_instance
 
     def test_extract_init_passed_to_handler_class(self):
         mock_cls = MagicMock()
-        with patch("src.ingestion.base_ingestion.get_handler_class", return_value=mock_cls):
+        with patch(
+            'src.ingestion.base_ingestion.get_handler_class',
+            return_value=mock_cls,
+        ):
             BaseIngestion(
-                handler="strava",
-                extract_method="run",
-                table="t",
-                extract_init={"db_path": ":memory:"},
+                handler='strava',
+                extract_method='run',
+                table='t',
+                extract_init={'db_path': ':memory:'},
             )
-        mock_cls.assert_called_once_with(db_path=":memory:")
+        mock_cls.assert_called_once_with(db_path=':memory:')
 
     def test_custom_handler_class_skips_get_handler_class(self):
         mock_cls = MagicMock()
-        with patch("src.ingestion.base_ingestion.get_handler_class") as mock_get:
+        with patch(
+            'src.ingestion.base_ingestion.get_handler_class'
+        ) as mock_get:
             BaseIngestion(
-                handler="strava",
-                extract_method="run",
-                table="t",
+                handler='strava',
+                extract_method='run',
+                table='t',
                 handler_class=mock_cls,
             )
         mock_get.assert_not_called()
@@ -123,23 +148,34 @@ class TestBaseIngestion:
         assert job.send_notification is False
 
     def test_overrides_applied(self):
-        job, _ = self._make_job({"table": "custom_table", "database": "custom.db"})
-        assert job.table == "custom_table"
-        assert job.database == "custom.db"
+        job, _ = self._make_job(
+            {'table': 'custom_table', 'database': 'custom.db'}
+        )
+        assert job.table == 'custom_table'
+        assert job.database == 'custom.db'
 
 
 # ---------------------------------------------------------------------------
 # insert_data_to_db
 # ---------------------------------------------------------------------------
 
+
 class TestInsertDataToDB:
-    def _make_job(self, publish_mode, extract_mode=ExtractMode.INCR.value, id_config_col="id"):
+    def _make_job(
+        self,
+        publish_mode,
+        extract_mode=ExtractMode.INCR.value,
+        id_config_col='id',
+    ):
         mock_cls = MagicMock()
-        with patch("src.ingestion.base_ingestion.get_handler_class", return_value=mock_cls):
+        with patch(
+            'src.ingestion.base_ingestion.get_handler_class',
+            return_value=mock_cls,
+        ):
             job = BaseIngestion(
-                handler="strava",
-                extract_method="run",
-                table="test_table",
+                handler='strava',
+                extract_method='run',
+                table='test_table',
                 publish_mode=publish_mode,
                 extract_mode=extract_mode,
                 id_config_col=id_config_col,
@@ -149,91 +185,125 @@ class TestInsertDataToDB:
     def test_upsert_mode_calls_upsert_data(self):
         job = self._make_job(PublishMode.UPSERT.value)
         mock_sqlite = MagicMock()
-        data = [{"id": 1}]
+        data = [{'id': 1}]
 
-        with patch("src.ingestion.base_ingestion.SQLiteHandler", return_value=mock_sqlite):
+        with patch(
+            'src.ingestion.base_ingestion.SQLiteHandler',
+            return_value=mock_sqlite,
+        ):
             insert_data_to_db(job, data)
 
         mock_sqlite.upsert_data.assert_called_once_with(
-            table_name="test_table", data=data, unique_key="id"
+            table_name='test_table', data=data, unique_key='id'
         )
 
     def test_truncate_mode_truncates_then_inserts(self):
-        job = self._make_job(PublishMode.TRUNCATE.value, extract_mode=ExtractMode.HIST.value)
+        job = self._make_job(
+            PublishMode.TRUNCATE.value, extract_mode=ExtractMode.HIST.value
+        )
         mock_sqlite = MagicMock()
-        data = [{"id": 1}]
+        data = [{'id': 1}]
 
-        with patch("src.ingestion.base_ingestion.SQLiteHandler", return_value=mock_sqlite):
+        with patch(
+            'src.ingestion.base_ingestion.SQLiteHandler',
+            return_value=mock_sqlite,
+        ):
             insert_data_to_db(job, data)
 
-        mock_sqlite.truncate_table.assert_called_once_with("test_table")
+        mock_sqlite.truncate_table.assert_called_once_with('test_table')
 
     def test_append_mode_calls_insert_data(self):
         job = self._make_job(PublishMode.APPEND.value)
         mock_sqlite = MagicMock()
-        data = [{"id": 1}]
+        data = [{'id': 1}]
 
-        with patch("src.ingestion.base_ingestion.SQLiteHandler", return_value=mock_sqlite):
+        with patch(
+            'src.ingestion.base_ingestion.SQLiteHandler',
+            return_value=mock_sqlite,
+        ):
             insert_data_to_db(job, data)
 
-        mock_sqlite.insert_data.assert_called_once_with(table_name="test_table", data=data)
+        mock_sqlite.insert_data.assert_called_once_with(
+            table_name='test_table', data=data
+        )
 
     def test_hist_mode_append_calls_insert_data(self):
-        job = self._make_job(PublishMode.APPEND.value, extract_mode=ExtractMode.HIST.value)
+        job = self._make_job(
+            PublishMode.APPEND.value, extract_mode=ExtractMode.HIST.value
+        )
         mock_sqlite = MagicMock()
-        data = [{"id": 2}]
+        data = [{'id': 2}]
 
-        with patch("src.ingestion.base_ingestion.SQLiteHandler", return_value=mock_sqlite):
+        with patch(
+            'src.ingestion.base_ingestion.SQLiteHandler',
+            return_value=mock_sqlite,
+        ):
             insert_data_to_db(job, data)
 
         mock_sqlite.insert_data.assert_called_once()
 
     def test_invalid_combination_raises_value_error(self):
-        job = self._make_job(publish_mode="INVALID_MODE")
+        job = self._make_job(publish_mode='INVALID_MODE')
         mock_sqlite = MagicMock()
 
-        with patch("src.ingestion.base_ingestion.SQLiteHandler", return_value=mock_sqlite):
-            with pytest.raises(ValueError, match="Unsupported publish mode"):
-                insert_data_to_db(job, [{"id": 1}])
+        with patch(
+            'src.ingestion.base_ingestion.SQLiteHandler',
+            return_value=mock_sqlite,
+        ):
+            with pytest.raises(ValueError, match='Unsupported publish mode'):
+                insert_data_to_db(job, [{'id': 1}])
 
 
 # ---------------------------------------------------------------------------
 # run
 # ---------------------------------------------------------------------------
 
+
 class TestRun:
     def _yaml_config(self, extra=None):
         config = {
-            "my_job": {
-                "handler": "strava",
-                "extract_method": "get_activities",
-                "table": "activities",
-                "id_config_col": "id",
-                "watermark_col": "start_date",
+            'my_job': {
+                'handler': 'strava',
+                'extract_method': 'get_activities',
+                'table': 'activities',
+                'id_config_col': 'id',
+                'watermark_col': 'start_date',
             }
         }
         if extra:
-            config["my_job"].update(extra)
+            config['my_job'].update(extra)
         return config
 
     def test_raises_when_job_not_found(self):
-        with patch("src.ingestion.base_ingestion.load_yaml", return_value={}), \
-             patch("src.utils.decorator_utils.send_message"):
-            with pytest.raises(ValueError, match="not found or not active"):
-                run("missing_job")
+        with (
+            patch('src.ingestion.base_ingestion.load_yaml', return_value={}),
+            patch('src.utils.decorator_utils.send_message'),
+        ):
+            with pytest.raises(ValueError, match='not found or not active'):
+                run('missing_job')
 
     def test_run_calls_extract_method(self):
         mock_instance = MagicMock()
-        mock_instance.get_activities.return_value = [{"id": 1}]
+        mock_instance.get_activities.return_value = [{'id': 1}]
         mock_cls = MagicMock(return_value=mock_instance)
 
-        with patch("src.ingestion.base_ingestion.load_yaml", return_value=self._yaml_config()), \
-             patch("src.ingestion.base_ingestion.get_handler_class", return_value=mock_cls), \
-             patch("src.ingestion.base_ingestion.SQLiteHandler") as mock_sqlite_cls, \
-             patch("src.utils.decorator_utils.send_message"):
+        with (
+            patch(
+                'src.ingestion.base_ingestion.load_yaml',
+                return_value=self._yaml_config(),
+            ),
+            patch(
+                'src.ingestion.base_ingestion.get_handler_class',
+                return_value=mock_cls,
+            ),
+            patch(
+                'src.ingestion.base_ingestion.SQLiteHandler'
+            ) as mock_sqlite_cls,
+            patch('src.utils.decorator_utils.send_message'),
+        ):
             mock_sqlite_cls.return_value.get_last_mtime.return_value = None
             mock_sqlite_cls.return_value.upsert_data.return_value = None
-            run("my_job")
+            run('my_job')
 
         mock_instance.get_activities.assert_called_once()
 
@@ -243,29 +313,53 @@ class TestRun:
         mock_cls = MagicMock(return_value=mock_instance)
 
         mock_sqlite = MagicMock()
-        mock_sqlite.get_last_mtime.return_value = "2024-01-01"
+        mock_sqlite.get_last_mtime.return_value = '2024-01-01'
         mock_sqlite.upsert_data.return_value = None
 
-        with patch("src.ingestion.base_ingestion.load_yaml", return_value=self._yaml_config()), \
-             patch("src.ingestion.base_ingestion.get_handler_class", return_value=mock_cls), \
-             patch("src.ingestion.base_ingestion.SQLiteHandler", return_value=mock_sqlite), \
-             patch("src.utils.decorator_utils.send_message"):
-            run("my_job")
+        with (
+            patch(
+                'src.ingestion.base_ingestion.load_yaml',
+                return_value=self._yaml_config(),
+            ),
+            patch(
+                'src.ingestion.base_ingestion.get_handler_class',
+                return_value=mock_cls,
+            ),
+            patch(
+                'src.ingestion.base_ingestion.SQLiteHandler',
+                return_value=mock_sqlite,
+            ),
+            patch('src.utils.decorator_utils.send_message'),
+        ):
+            run('my_job')
 
         mock_sqlite.get_last_mtime.assert_called_once()
 
     def test_run_calls_insert_data_to_db(self):
         mock_instance = MagicMock()
-        mock_instance.get_activities.return_value = [{"id": 1, "start_date": "2024-01-01"}]
+        mock_instance.get_activities.return_value = [
+            {'id': 1, 'start_date': '2024-01-01'}
+        ]
         mock_cls = MagicMock(return_value=mock_instance)
 
         mock_sqlite = MagicMock()
         mock_sqlite.get_last_mtime.return_value = None
 
-        with patch("src.ingestion.base_ingestion.load_yaml", return_value=self._yaml_config()), \
-             patch("src.ingestion.base_ingestion.get_handler_class", return_value=mock_cls), \
-             patch("src.ingestion.base_ingestion.SQLiteHandler", return_value=mock_sqlite), \
-             patch("src.utils.decorator_utils.send_message"):
-            run("my_job")
+        with (
+            patch(
+                'src.ingestion.base_ingestion.load_yaml',
+                return_value=self._yaml_config(),
+            ),
+            patch(
+                'src.ingestion.base_ingestion.get_handler_class',
+                return_value=mock_cls,
+            ),
+            patch(
+                'src.ingestion.base_ingestion.SQLiteHandler',
+                return_value=mock_sqlite,
+            ),
+            patch('src.utils.decorator_utils.send_message'),
+        ):
+            run('my_job')
 
         mock_sqlite.upsert_data.assert_called_once()

@@ -6,39 +6,42 @@ from src.utils.file import load_yaml
 
 env = EnvManager()
 
+
 @dataclass
 class ServiceConfig:
-    #Unit
+    # Unit
     name: str
     description: str
     after: str = None
     wants: str = None
-    #Service
-    type: str = "simple"
-    user: str = env.get("USER")
-    project_path: str = env.get("PROJECT_PATH")
-    venv_path: str = env.get("VENV_PATH")
+    # Service
+    type: str = 'simple'
+    user: str = env.get('USER')
+    project_path: str = env.get('PROJECT_PATH')
+    venv_path: str = env.get('VENV_PATH')
     exec_start_pre: str = None
     exec_module: str = None
     exec_file: str = None
-    restart: str = "on-failure"
-    restart_sec: str = "5"
+    restart: str = 'on-failure'
+    restart_sec: str = '5'
     memory_max: str = None
     cpu_quota: str = None
     environment_pythonpath: str = None
-    #Install
-    wanted_by: str = "multi-user.target"
+    # Install
+    wanted_by: str = 'multi-user.target'
 
     def __post_init__(self):
         if not self.exec_module and not self.exec_file:
-            raise ValueError("Either exec_module or exec_file must be provided.")
+            raise ValueError(
+                'Either exec_module or exec_file must be provided.'
+            )
 
 
 def load_service_config(yaml_path: str, service):
     data = load_yaml(yaml_path)[service]
     data['name'] = service
     service = ServiceConfig(**data)
-    WorkingDirectory = f"/home/{service.user}/{service.project_path}"
+    WorkingDirectory = f'/home/{service.user}/{service.project_path}'
     return dedent(f"""
     [Unit]
     Description={service.description}
@@ -66,6 +69,7 @@ def load_service_config(yaml_path: str, service):
     WantedBy={service.wanted_by}
     """)
 
+
 # sudo systemctl daemon-reexec
 # sudo systemctl daemon-reload
 # sudo systemctl start mqtt-telegram
@@ -76,7 +80,9 @@ def load_service_config(yaml_path: str, service):
 # sudo systemctl stop mqtt-telegram
 # sudo systemctl disable mqtt-telegram
 
-if __name__ == "__main__":
-    config = load_service_config("configs/services/hdd_mount_recover.yml", "hdd-mount-recover")
-    with open("./sandbox/output/output.service", "w") as f:
+if __name__ == '__main__':
+    config = load_service_config(
+        'configs/services/hdd_mount_recover.yml', 'hdd-mount-recover'
+    )
+    with open('./sandbox/output/output.service', 'w') as f:
         f.write(config)

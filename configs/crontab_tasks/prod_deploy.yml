@@ -5,7 +5,7 @@ prod_deploy:
   schedule: "0 0 * * *"
   commands:
     - git pull origin main
-    - .venv/bin/pip install -r requirements.txt
+    - .venv/bin/pip install .
     # - TODO: automate publishing/modifying services, crontab tasks and new ddl scripts
     - "echo \"$(date): Pull completed\" >> logs/prod-deploy.log"
   wrap_braces: true

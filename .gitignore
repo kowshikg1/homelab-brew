@@ -18,6 +18,12 @@ secrets/
 id_rsa
 id_rsa.pub
 
+#Metadata
+*.egg-info
+
+#Build artifacts
+build/
+
 # Backup archives and dumps
 *.tar
 *.tar.gz

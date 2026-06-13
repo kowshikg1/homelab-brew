@@ -1,14 +1,15 @@
 import os
-
 from pathlib import Path
+
 from src.utils.log_util import get_logger
 
 log = get_logger(Path(__file__).stem)
 
+
 class EnvManager:
     """A simple environment variable manager that reads from and writes to a .env file."""
 
-    def __init__(self, env_file=".env") -> None:
+    def __init__(self, env_file='.env') -> None:
         self.env_file = env_file
         self.env_vars = {}
         self.load_env()
@@ -18,10 +19,12 @@ class EnvManager:
         Load environment variables from the .env file into a dictionary.
         """
         if not os.path.exists(self.env_file):
-            log.error(f"{self.env_file} not found. No environment variables loaded.")
+            log.error(
+                f'{self.env_file} not found. No environment variables loaded.'
+            )
             return
-        
-        with open(self.env_file, 'r') as f:
+
+        with open(self.env_file) as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#'):
@@ -60,4 +63,4 @@ class EnvManager:
         """
         with open(self.env_file, 'w') as f:
             for key, value in self.env_vars.items():
-                f.write(f"{key}={value}\n")
+                f.write(f'{key}={value}\n')

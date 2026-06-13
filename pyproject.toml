@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "homelab-brew"
+dynamic = ["version"]
+description = "Manage homelab"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "click>=8.4.1",
+    "lazy>=1.6",
+    "paho-mqtt==2.1.0",
+    "pandas>=3.0.1",
+    "pre_commit",
+    "psutil>=6.1.1",
+    "pytest>=9.0.3",
+    "PyYAML>=6.0.3",
+    "requests>=2.32.5",
+]
+
+[project.scripts]
+run-hook = "src.hooks.run_hook:run"
+run-job = "src.ingestion.base_ingestion:main"
+compile-ingestion-configs = "src.scripts.configs.compile_ingestion_configs:compile_ingestion"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 80
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort (import sorting)
+    "B",   # flake8-bugbear (common bugs/design problems)
+    "UP",  # pyupgrade (modernize Python syntax)
+]
+ignore = [
+    "E501", # lines-too-long
+]
+
+[tool.ruff.format]
+quote-style = "single"

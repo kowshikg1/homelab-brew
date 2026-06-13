@@ -1,11 +1,11 @@
 import pytest
 
-from src.scripts.services.hdd_mount_recover import DiskMapping, GlobalConfig
 import src.scripts.services.hdd_mount_recover as module
+from src.scripts.services.hdd_mount_recover import DiskMapping, GlobalConfig
 
 
 def test_parse_mapping_valid(tmp_path):
-    mapping = tmp_path / "map.yml"
+    mapping = tmp_path / 'map.yml'
     mapping.write_text(
         """
 version: 1
@@ -33,37 +33,39 @@ disks:
 
     assert len(disks) == 1
     assert isinstance(disks[0], DiskMapping)
-    assert disks[0].uuid == "u-1"
-    assert disks[0].mountpoint == "/mnt/a"
-    assert disks[0].containers == ["c1", "c2"]
-    assert disks[0].images == ["img:1"]
+    assert disks[0].uuid == 'u-1'
+    assert disks[0].mountpoint == '/mnt/a'
+    assert disks[0].containers == ['c1', 'c2']
+    assert disks[0].images == ['img:1']
 
 
 def test_parse_mapping_requires_disks(tmp_path):
-    mapping = tmp_path / "map.yml"
-    mapping.write_text("version: 1\nglobal: {}\ndisks: []\n")
+    mapping = tmp_path / 'map.yml'
+    mapping.write_text('version: 1\nglobal: {}\ndisks: []\n')
 
-    with pytest.raises(ValueError, match="non-empty list"):
+    with pytest.raises(ValueError, match='non-empty list'):
         module._parse_mapping(str(mapping))
 
 
 def test_iter_target_containers_deduplicates(monkeypatch):
     disk = DiskMapping(
-        uuid="u-1",
-        mountpoint="/mnt/a",
-        containers=["c1", "c2"],
-        images=["img:1"],
+        uuid='u-1',
+        mountpoint='/mnt/a',
+        containers=['c1', 'c2'],
+        images=['img:1'],
         enabled=True,
     )
 
-    monkeypatch.setattr(module, "_list_running_containers_for_image", lambda _img: ["c2", "c3"])
+    monkeypatch.setattr(
+        module, '_list_running_containers_for_image', lambda _img: ['c2', 'c3']
+    )
     result = list(module._iter_target_containers(disk))
 
-    assert result == ["c1", "c2", "c3"]
+    assert result == ['c1', 'c2', 'c3']
 
 
 def test_run_reconciliation_happy_path(monkeypatch, tmp_path):
-    mapping = tmp_path / "map.yml"
+    mapping = tmp_path / 'map.yml'
     mapping.write_text(
         """
 version: 1
@@ -80,30 +82,30 @@ disks:
 """.strip()
     )
 
-    called = {"recover": 0, "restart": 0}
+    called = {'recover': 0, 'restart': 0}
 
-    monkeypatch.setattr(module, "_is_mounted", lambda _mp: True)
+    monkeypatch.setattr(module, '_is_mounted', lambda _mp: True)
 
     def fake_recover_mount(**_kwargs):
-      called["recover"] += 1
-      return True
+        called['recover'] += 1
+        return True
 
     def fake_restart(_container, _timeout):
-      called["restart"] += 1
-      return True, ""
+        called['restart'] += 1
+        return True, ''
 
-    monkeypatch.setattr(module, "_recover_mount", fake_recover_mount)
-    monkeypatch.setattr(module, "_restart_container", fake_restart)
+    monkeypatch.setattr(module, '_recover_mount', fake_recover_mount)
+    monkeypatch.setattr(module, '_restart_container', fake_restart)
 
     exit_code = module.run_reconciliation(str(mapping), dry_run=False)
 
     assert exit_code == 0
-    assert called["recover"] == 0
-    assert called["restart"] == 0
+    assert called['recover'] == 0
+    assert called['restart'] == 0
 
 
 def test_run_reconciliation_mount_failure_continue(monkeypatch, tmp_path):
-    mapping = tmp_path / "map.yml"
+    mapping = tmp_path / 'map.yml'
     mapping.write_text(
         """
 version: 1
@@ -120,15 +122,15 @@ disks:
 """.strip()
     )
 
-    monkeypatch.setattr(module, "_is_mounted", lambda _mp: False)
-    monkeypatch.setattr(module, "_recover_mount", lambda **_kwargs: False)
+    monkeypatch.setattr(module, '_is_mounted', lambda _mp: False)
+    monkeypatch.setattr(module, '_recover_mount', lambda **_kwargs: False)
 
     exit_code = module.run_reconciliation(str(mapping), dry_run=False)
     assert exit_code == 1
 
 
 def test_run_reconciliation_dry_run_does_not_restart(monkeypatch, tmp_path):
-    mapping = tmp_path / "map.yml"
+    mapping = tmp_path / 'map.yml'
     mapping.write_text(
         """
 version: 1
@@ -145,16 +147,16 @@ disks:
 """.strip()
     )
 
-    called = {"restart": 0}
+    called = {'restart': 0}
 
-    monkeypatch.setattr(module, "_is_mounted", lambda _mp: True)
+    monkeypatch.setattr(module, '_is_mounted', lambda _mp: True)
 
     def fake_restart(_container, _timeout):
-        called["restart"] += 1
-        return True, ""
+        called['restart'] += 1
+        return True, ''
 
-    monkeypatch.setattr(module, "_restart_container", fake_restart)
+    monkeypatch.setattr(module, '_restart_container', fake_restart)
 
     exit_code = module.run_reconciliation(str(mapping), dry_run=True)
     assert exit_code == 0
-    assert called["restart"] == 0
+    assert called['restart'] == 0

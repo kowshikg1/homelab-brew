@@ -1,34 +1,37 @@
-import sys
-
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
+
+import click
 
 from src.handlers.sqlite import SQLiteHandler
 from src.ingestion.ingestion_map import get_handler_class
 from src.utils.decorator_utils import telegram_alert, timeout
 from src.utils.file import load_yaml
 from src.utils.log_util import get_logger
-from src.utils.path_variables import PATH_INGESTION_CONFIG, INGESTION_SQLITE_DB
+from src.utils.path_variables import PATH_INGESTION_CONFIG
 
 log = get_logger(Path(__file__).stem)
 
+
 class ExtractMode(Enum):
-    INCR = "INCR"
-    HIST = "HIST"
+    INCR = 'INCR'
+    HIST = 'HIST'
+
 
 class PublishMode(Enum):
-    UPSERT = "UPSERT"
-    APPEND = "APPEND"
-    TRUNCATE = "TRUNCATE"
+    UPSERT = 'UPSERT'
+    APPEND = 'APPEND'
+    TRUNCATE = 'TRUNCATE'
+
 
 @dataclass
 class BaseIngestion:
     handler: str
     extract_method: str
     table: str
-    database: str = "ingestion.db"
+    database: str = 'ingestion.db'
     handler_class: str = None
     extract_init: dict[str, Any] = field(default_factory=dict)
     extract_params: dict[str, Any] = field(default_factory=dict)
@@ -39,14 +42,18 @@ class BaseIngestion:
     watermark_col: str = None
     send_notification: bool = False
     failure_notification: bool = True
-    #not much use:
-    description: str = ""
+    # not much use:
+    description: str = ''
     is_active: bool = True
     schedule: str = None
     logging: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.handler_class = get_handler_class(self.handler) if not self.handler_class else self.handler_class
+        self.handler_class = (
+            get_handler_class(self.handler)
+            if not self.handler_class
+            else self.handler_class
+        )
         self.handler_instance = self.handler_class(**self.extract_init)
         # self.extract_method = self.extract_method or "run"
 
@@ -62,15 +69,21 @@ def insert_data_to_db(job: BaseIngestion, data) -> None:
             data=data,
             unique_key=job.id_config_col,
         )
-    elif job.extract_mode == ExtractMode.HIST.value or job.publish_mode == PublishMode.APPEND.value:
+    elif (
+        job.extract_mode == ExtractMode.HIST.value
+        or job.publish_mode == PublishMode.APPEND.value
+    ):
         sqlite_handler.insert_data(
             table_name=job.table,
             data=data,
         )
     else:
-        raise ValueError(f"Unsupported publish mode: {job.publish_mode} and extract mode: {job.extract_mode} combination.")
+        raise ValueError(
+            f'Unsupported publish mode: {job.publish_mode} and extract mode: {job.extract_mode} combination.'
+        )
 
-@telegram_alert(alert_level="error")
+
+@telegram_alert(alert_level='error')
 @timeout(seconds=300)
 def run(job_name):
     config = load_yaml(PATH_INGESTION_CONFIG).get(job_name, None)
@@ -87,11 +100,18 @@ def run(job_name):
     if job.last_mtime:
         job.extract_params['last_mtime'] = job.last_mtime
     data = extract_function(**job.extract_params)
-    #TODO: add extra meta columns like ingestion time, soft delete flag, etc.
+    # TODO: add extra meta columns like ingestion time, soft delete flag, etc.
     insert_data_to_db(job, data)
-    log.info(f"Ingestion job '{job_name}' completed successfully. Extracted {len(data)} records.")
+    log.info(
+        f"Ingestion job '{job_name}' completed successfully. Extracted {len(data)} records."
+    )
 
 
-if __name__ == "__main__":
-    job_name = sys.argv[1]
+@click.command()
+@click.argument('job_name')
+def main(job_name):
     run(job_name)
+
+
+if __name__ == '__main__':
+    main()

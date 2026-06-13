@@ -11,4 +11,3 @@ currently this repository contains the core configuration, scripts, and automati
 
 ## Purpose
 The goal of this repo is to keep my homelab organized, version‑controlled, and easy to maintain or rebuild when needed.
-

@@ -1,14 +1,16 @@
 import sqlite3
 from pathlib import Path
-from lazy import lazy
-import pandas as pd
 
+import pandas as pd
+from lazy import lazy
+
+from src.utils.commons import to_text
 from src.utils.log_util import get_logger
 from src.utils.path_variables import INGESTION_SQLITE_DB
-from src.utils.commons import to_text
 
-DEFAULT_DTYPE = "TEXT"
+DEFAULT_DTYPE = 'TEXT'
 log = get_logger(Path(__file__).stem)
+
 
 class SQLiteHandler:
     def __init__(self, db_path: str = INGESTION_SQLITE_DB) -> None:
@@ -26,13 +28,20 @@ class SQLiteHandler:
             else:
                 cursor.execute(query)
             return cursor.fetchall()
+
     def alter_table(self, table_name: str, columns: dict) -> None:
         existing_columns = self.get_table_columns(table_name)
         for col, dtype in columns.items():
             if col not in existing_columns:
                 self.add_column(table_name, col, dtype)
 
-    def create_table(self, table_name: str, columns: dict, pkey: str = None, auto_alter: bool = False,) -> None:
+    def create_table(
+        self,
+        table_name: str,
+        columns: dict,
+        pkey: str = None,
+        auto_alter: bool = False,
+    ) -> None:
         """
         :param pkey: The column name to set as PRIMARY KEY (optional).
         :param auto_alter: If True, automatically add new columns if they don't exist (default: False).
@@ -42,60 +51,77 @@ class SQLiteHandler:
                 self.alter_table(table_name, columns)
             return
         if pkey and pkey in columns:
-            columns_def = ", ".join([f"{col} {dtype}{' PRIMARY KEY' if col == pkey else ''}" for col, dtype in columns.items()])
+            columns_def = ', '.join(
+                [
+                    f'{col} {dtype}{" PRIMARY KEY" if col == pkey else ""}'
+                    for col, dtype in columns.items()
+                ]
+            )
         else:
-            columns_def = ", ".join([f"{col} {dtype}" for col, dtype in columns.items()])
-        query = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_def})"
+            columns_def = ', '.join(
+                [f'{col} {dtype}' for col, dtype in columns.items()]
+            )
+        query = f'CREATE TABLE IF NOT EXISTS {table_name} ({columns_def})'
         self.execute_query(query)
-    
+
     def does_table_exist(self, table_name: str) -> bool:
         query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'"
         result = self.execute_query(query)
         return len(result) > 0
-    
+
     def drop_table(self, table_name: str) -> None:
-        query = f"DROP TABLE IF EXISTS {table_name}"
+        query = f'DROP TABLE IF EXISTS {table_name}'
         self.execute_query(query)
-    
+
     def truncate_table(self, table_name: str) -> None:
-        query = f"DELETE FROM {table_name}"
+        query = f'DELETE FROM {table_name}'
         self.execute_query(query)
-    
-    def add_column(self, table_name: str, column_name: str, dtype: str = DEFAULT_DTYPE) -> None:
-        query = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {dtype}"
+
+    def add_column(
+        self, table_name: str, column_name: str, dtype: str = DEFAULT_DTYPE
+    ) -> None:
+        query = f'ALTER TABLE {table_name} ADD COLUMN {column_name} {dtype}'
         self.execute_query(query)
-    
+
     def get_table_columns(self, table_name: str) -> list:
-        query = f"PRAGMA table_info({table_name})"
+        query = f'PRAGMA table_info({table_name})'
         result = self.execute_query(query)
         return [row[1] for row in result] if result else []
 
-    def get_last_mtime(self, table_name: str, watermark_col: str = "mtime") -> float:
+    def get_last_mtime(
+        self, table_name: str, watermark_col: str = 'mtime'
+    ) -> float:
         if not self.does_table_exist(table_name):
             return None
-        query = f"SELECT MAX({watermark_col}) FROM {table_name}"
+        query = f'SELECT MAX({watermark_col}) FROM {table_name}'
         result = self.execute_query(query)
         return result[0][0] if result and result[0][0] else None
-    
-    def insert_data(self, table_name: str, data: list[dict] | pd.DataFrame) -> None:
+
+    def insert_data(
+        self, table_name: str, data: list[dict] | pd.DataFrame
+    ) -> None:
         if isinstance(data, pd.DataFrame):
             data = data.to_dict(orient='records')
-        
+
         if not data:
-            log.info("No data to insert.")
+            log.info('No data to insert.')
             return
 
         columns = sorted({k for row in data for k in row.keys()})
-        placeholders = ", ".join(["?"] * len(columns))
-        query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
-        values = [tuple(to_text(row.get(col)) for col in columns) for row in data]
-        
+        placeholders = ', '.join(['?'] * len(columns))
+        query = f'INSERT INTO {table_name} ({", ".join(columns)}) VALUES ({placeholders})'
+        values = [
+            tuple(to_text(row.get(col)) for col in columns) for row in data
+        ]
+
         with self.connect as conn:
             cursor = conn.cursor()
             cursor.executemany(query, values)
             conn.commit()
 
-    def upsert_data(self, table_name: str, data: list[dict] | pd.DataFrame, unique_key: str) -> None:
+    def upsert_data(
+        self, table_name: str, data: list[dict] | pd.DataFrame, unique_key: str
+    ) -> None:
         """Upsert data into the specified table based on a unique key.
 
         :param unique_key: The column name that serves as the unique key for conflict resolution.
@@ -103,30 +129,34 @@ class SQLiteHandler:
 
         if isinstance(data, pd.DataFrame):
             data = data.to_dict(orient='records')
-        
+
         if not data:
-            log.info("No data to upsert.")
+            log.info('No data to upsert.')
             return
-        
+
         columns = sorted({k for row in data for k in row.keys()})
-        placeholders = ", ".join(["?"] * len(columns))
-        update_placeholders = ", ".join([f"{col}=excluded.{col}" for col in columns if col != unique_key])
+        placeholders = ', '.join(['?'] * len(columns))
+        update_placeholders = ', '.join(
+            [f'{col}=excluded.{col}' for col in columns if col != unique_key]
+        )
         query = f"""
-            INSERT INTO {table_name} ({', '.join(columns)}) 
+            INSERT INTO {table_name} ({', '.join(columns)})
             VALUES ({placeholders})
             ON CONFLICT({unique_key}) DO UPDATE SET {update_placeholders}
         """
-        values = [tuple(to_text(row.get(col)) for col in columns) for row in data]
-        
+        values = [
+            tuple(to_text(row.get(col)) for col in columns) for row in data
+        ]
+
         with self.connect as conn:
             cursor = conn.cursor()
             cursor.executemany(query, values)
             conn.commit()
 
 
-if __name__ == "__main__":
-    db_handler = SQLiteHandler("./data/ingestion.db")
+if __name__ == '__main__':
+    db_handler = SQLiteHandler('./data/ingestion.db')
     # query = "PRAGMA table_info(strava_activities);"
-    query = "SELECT * FROM strava_activities;"
+    query = 'SELECT * FROM strava_activities;'
     result = db_handler.execute_query(query)
     print(result)
