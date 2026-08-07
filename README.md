@@ -1,13 +1,23 @@
+<!-- TODO: add detailed instructions and links -->
 # Homelab Infrastructure
 
-currently this repository contains the core configuration, scripts, and automation used to manage my self‑hosted environment. It serves as a central place to organize container setups, maintenance utilities, backup logic, and other operational resources.
+This repository contains configuration, scripts, ingestion jobs, and now an early dashboard foundation to manage a self-hosted homelab setup.
 
 ## Contents
-- Docker and container configurations  
-- Automation and maintenance scripts
-- Backup‑related scripts
-- General infrastructure resources
-- ans more ..
+- Container and service configurations
+- Ingestion and automation scripts
+- Utility modules and handlers
+- Dashboard foundation:
+	- FastAPI backend
+	- React frontend
 
-## Purpose
-The goal of this repo is to keep my homelab organized, version‑controlled, and easy to maintain or rebuild when needed.
+## Dashboard (v1)
+
+The first dashboard version focuses on one core problem: quickly opening services without memorizing ports.
+
+## Local Setup
+
+### Prerequisites
+- Python 3.12
+- `pip` for Python package installation
+- Node.js + npm for frontend

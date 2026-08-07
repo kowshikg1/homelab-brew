@@ -54,6 +54,13 @@ temp/
 #Config files
 configs/ingestion_config.json
 configs/crontab_tasks/compiled.crontab
+configs/cache/
+
+# Frontend generated artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
 
 #Sandbox test files
 sandbox/

@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "categories": {
+    "media": { "display_name": "Media", "order": 1 },
+    "downloads": { "display_name": "Downloads", "order": 2 },
+    "photos": { "display_name": "Photos", "order": 3 },
+    "admin": { "display_name": "Admin", "order": 4 }
+  },
+  "services": [
+    {
+      "name": "jellyfin",
+      "display_name": "Jellyfin",
+      "category": "media",
+      "icon": "media",
+      "url": "http://192.168.0.100:8096",
+      "urls": {
+        "lan": "http://192.168.0.100:8096",
+        "tailscale": "",
+        "public": ""
+      },
+      "status_urls": {
+        "lan": "http://192.168.0.100:8096",
+        "tailscale": "",
+        "public": ""
+      },
+      "enabled": true
+    },
+    {
+      "name": "radarr",
+      "display_name": "Radarr",
+      "category": "media",
+      "icon": "media",
+      "url": "http://192.168.0.100:7878",
+      "urls": {
+        "lan": "http://192.168.0.100:7878",
+        "tailscale": "",
+        "public": ""
+      },
+      "status_urls": {
+        "lan": "http://192.168.0.100:7878",
+        "tailscale": "",
+        "public": ""
+      },
+      "enabled": true
+    },
+    {
+      "name": "sonarr",
+      "display_name": "Sonarr",
+      "category": "media",
+      "icon": "media",
+      "url": "http://192.168.0.100:8989",
+      "urls": {
+        "lan": "http://192.168.0.100:8989",
+        "tailscale": "",
+        "public": ""
+      },
+      "status_urls": {
+        "lan": "http://192.168.0.100:8989",
+        "tailscale": "",
+        "public": ""
+      },
+      "enabled": true
+    },
+    {
+      "name": "utorrent",
+      "display_name": "uTorrent",
+      "category": "downloads",
+      "icon": "download",
+      "url": "http://192.168.0.100:8080",
+      "urls": {
+        "lan": "http://192.168.0.100:8080",
+        "tailscale": "",
+        "public": ""
+      },
+      "status_urls": {
+        "lan": "http://192.168.0.100:8080",
+        "tailscale": "",
+        "public": ""
+      },
+      "enabled": true
+    },
+    {
+      "name": "immich",
+      "display_name": "Immich",
+      "category": "photos",
+      "icon": "photo",
+      "url": "http://192.168.0.100:2283",
+      "urls": {
+        "lan": "http://192.168.0.100:2283",
+        "tailscale": "",
+        "public": ""
+      },
+      "status_urls": {
+        "lan": "http://192.168.0.100:2283",
+        "tailscale": "",
+        "public": ""
+      },
+      "enabled": true
+    },
+    {
+      "name": "portainer",
+      "display_name": "Portainer",
+      "category": "admin",
+      "icon": "whale",
+      "url": "https://192.168.0.100:9443",
+      "urls": {
+        "lan": "https://192.168.0.100:9443",
+        "tailscale": "",
+        "public": ""
+      },
+      "status_urls": {
+        "lan": "https://192.168.0.100:9443",
+        "tailscale": "",
+        "public": ""
+      },
+      "enabled": true
+    }
+  ]
+}

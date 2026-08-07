@@ -5,7 +5,10 @@ ENV_FILE_GLOBAL = Path('./.env')
 ENV_FILE_HANDLERS = Path('./src/handlers/.env')
 
 # Configs
-PATH_INGESTION_CONFIG = Path('./configs/ingestion_config.json')
+PATH_INGESTION_CONFIG = Path('./configs/cache/ingestion_config.json')
+# frontend service
+PATH_SERVICES_CATALOG = Path('./configs/frontend/services-catalog.yml')
+PATH_COMPILED_SERVICES_CATALOG = Path('./configs/cache/services-catalog.json')
 
 # Paths
 PATH_INGESTION_FOLDER = Path('./configs/ingestion')

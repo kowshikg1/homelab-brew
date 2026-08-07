@@ -6,7 +6,8 @@ prod_deploy:
   commands:
     - git pull origin main
     - .venv/bin/pip install .
-    # - TODO: automate publishing/modifying services, crontab tasks and new ddl scripts
+    # TODO: automate publishing/modifying services, crontab tasks and new ddl scripts
+    # TODO: init dashboard services/api
     - "echo \"$(date): Pull completed\" >> logs/prod-deploy.log"
   wrap_braces: true
   extra_command: "|| echo \"$(date): Pull failed\" > logs/prod-deploy.log"

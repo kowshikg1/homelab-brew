@@ -1,0 +1,64 @@
+version: 1
+
+hosts:
+  lan: http://192.168.1.100       # Your server's local IP
+  tailscale: http://100.122.x.x   # Your Tailscale IP (replace x.x with actual)
+  public: https://domain.com   # Your public domain
+
+categories:
+  media:
+    display_name: Media
+    order: 1
+  downloads:
+    display_name: Downloads
+    order: 2
+  photos:
+    display_name: Photos
+    order: 3
+  admin:
+    display_name: Admin
+    order: 4
+
+services:
+  - name: jellyfin
+    display_name: Jellyfin
+    category: media
+    icon: play
+    port: ":8096"
+    enabled: true
+
+  - name: radarr
+    display_name: Radarr
+    category: media
+    icon: film
+    port: ":7878"
+    enabled: true
+
+  - name: sonarr
+    display_name: Sonarr
+    category: media
+    icon: tv
+    port: ":8989"
+    enabled: true
+
+  - name: utorrent
+    display_name: uTorrent
+    category: downloads
+    icon: download
+    port: ":8080"
+    enabled: true
+
+  - name: immich
+    display_name: Immich
+    category: photos
+    icon: image
+    port: ":2283"
+    enabled: true
+
+  - name: portainer
+    display_name: Portainer
+    category: admin
+    icon: whale
+    port: ":9443"
+    protocol: https   # Override to https for this service
+    enabled: true
