@@ -1,0 +1,16 @@
+version: 1
+
+# Path relative to the repo root
+source_dir: logs/
+
+hdd:
+  enabled: true
+  mountpoint: /media
+  # logs are append-only so doing a single mirror
+  dest_subdir: backups/homelab-brew/logs
+
+cloud:
+  enabled: true
+  # not using gdrive-crypt remote for logs, as they are not sensitive
+  rclone_remote: gdrive
+  dest_path: /homelab-brew/logs

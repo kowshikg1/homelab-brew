@@ -1,0 +1,38 @@
+# Backup jobs — databases and logs.
+# Scheduled 30min from prod_deploy
+
+db_backup_hdd:
+  description: Backup data/ databases to external HDD
+  is_active: true
+  schedule: 30 0 * * *
+  repo: /home/koushik/prod/homelab-brew
+  script: src/scripts/services/db_backup.py
+  args:
+    - --target hdd
+
+db_backup_cloud:
+  description: Backup data/ databases to Google Cloud via rclone (weekly)
+  is_active: true
+  schedule: 35 0 * * 0
+  repo: /home/koushik/prod/homelab-brew
+  script: src/scripts/services/db_backup.py
+  args:
+    - --target cloud
+
+log_backup_hdd:
+  description: Sync logs/ to external HDD (daily)
+  is_active: true
+  schedule: 40 0 * * *
+  repo: /home/koushik/prod/homelab-brew
+  script: src/scripts/services/log_backup.py
+  args:
+    - --target hdd
+
+log_backup_cloud:
+  description: Upload logs to Google Cloud via rclone (weekly - uncompressed)
+  is_active: true 
+  schedule: 45 0 * * 0
+  repo: /home/koushik/prod/homelab-brew
+  script: src/scripts/services/log_backup.py
+  args:
+    - --target cloud

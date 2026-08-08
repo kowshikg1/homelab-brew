@@ -1,0 +1,21 @@
+version: 1
+
+# Paths relative to the repo root
+source_dir: data/
+backup_name: homelab-brew-db #optional
+
+hdd:
+  enabled: true
+  # Mountpoint of the external HDD
+  mountpoint: /media
+  dest_subdir: backups/homelab-brew/data
+  # Number of timestamped snapshots to keep; older ones are deleted
+  retention_count: 30   # daily = ~30 days of local history
+
+cloud:
+  enabled: true
+  # Name of the rclone remote configured for Google Drive/S3
+  rclone_remote: gdrive-crypt
+  dest_path: /homelab-brew/data
+  # Cloud snapshots to keep (weekly = ~4–8 per month)
+  retention_count: 8

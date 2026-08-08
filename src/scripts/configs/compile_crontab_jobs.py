@@ -112,7 +112,11 @@ def _build_general_command(job_name: str, job_config: dict[str, Any]) -> str:
         script = job_config.get('script')
         if script:
             script = str(script)
-            args = [shlex.quote(str(arg)) for arg in job_config.get('args', [])]
+            args = [
+                shlex.quote(token)
+                for arg in job_config.get('args', [])
+                for token in shlex.split(str(arg))
+            ]
             run_with_python = bool(
                 job_config.get('python', script.endswith('.py'))
             )
