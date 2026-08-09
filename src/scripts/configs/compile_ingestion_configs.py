@@ -20,9 +20,12 @@ def compile_ingestion():
                 raise ValueError(
                     f"Duplicate job name '{job_name}' found in {config_file}. Job names must be unique across all config files."
                 )
-            compiled_configs[job_name] = (
-                job_config if job_config.get('is_active') else None
-            )  # Only include active jobs
+            if job_config.get('is_active'):
+                compiled_job = dict(job_config)
+                compiled_job['config_file'] = config_file.as_posix()
+                compiled_configs[job_name] = compiled_job
+            else:
+                compiled_configs[job_name] = None
     save_json(compiled_configs, PATH_INGESTION_CONFIG)
 
 

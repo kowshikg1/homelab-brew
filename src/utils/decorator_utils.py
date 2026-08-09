@@ -2,24 +2,95 @@ import functools
 import json
 import logging
 import signal
+import sys
 import threading
 import traceback
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
+from pathlib import Path
 from typing import Any
 
 from src.handlers.sqlite import SQLiteHandler
 from src.handlers.telegram import send_message
 from src.utils.commons import current_timestamp, get_git_head, hash_object
-from src.utils.file import load_yaml
+from src.utils.file import load_json
 from src.utils.log_util import get_logger
-from src.utils.path_variables import PATH_INGESTION_CONFIG
+from src.utils.path_variables import (
+    PATH_INGESTION_CONFIG,
+    PATH_INGESTION_FOLDER,
+)
 
 log = get_logger(__name__)
 
 # Thread-local storage to prevent infinite loops
 _alert_context = threading.local()
+
+
+def script_execution_audit(
+    table_name: str = 'script_execution_audit',
+    db_path: str = './data/ingestion.db',
+) -> Callable:
+    """Decorator to persist script execution audit records."""
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            execution_id = None  # Unique identifier for the script execution, currently null
+            script_name = Path(func.__code__.co_filename).name
+            start_time = current_timestamp(precision='ms')
+            commit_hash = get_git_head()
+
+            if args or kwargs:
+                args_payload: Any = {
+                    'args': list(args),
+                    'kwargs': kwargs,
+                }
+            else:
+                args_payload = sys.argv[1:]
+
+            audit_id = hash_object(
+                (script_name, start_time, args_payload, commit_hash)
+            )
+            end_time = None
+            status = 0
+            error = None
+
+            try:
+                result = func(*args, **kwargs)
+                status = 1
+                return result
+            except Exception:
+                error = traceback.format_exc()
+                raise
+            finally:
+                end_time = current_timestamp(precision='ms')
+                try:
+                    sqlite_handler = SQLiteHandler(db_path)
+                    sqlite_handler.insert_data(
+                        table_name=table_name,
+                        data=[
+                            {
+                                'id': audit_id,
+                                'execution_id': execution_id,
+                                'script_name': script_name,
+                                'commit_hash': commit_hash,
+                                'args': json.dumps(args_payload, default=str),
+                                'start_time': start_time,
+                                'end_time': end_time,
+                                'status': status,
+                                'error': error,
+                            }
+                        ],
+                    )
+                except Exception as exc:
+                    log.warning(
+                        f'Failed to insert script audit row into {table_name}: {exc}'
+                    )
+
+        return wrapper
+
+    return decorator
 
 
 def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
@@ -35,10 +106,10 @@ def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
             job_name = runtime_config.pop(
                 'job_name'
             )  # remove job_name from runtime_config as it's populated
-            start_time = current_timestamp()
+            start_time = current_timestamp(precision='ms')
             commit_hash = get_git_head()
             id = hash_object((run_id, job_name, start_time, commit_hash))
-            default_config = load_yaml(PATH_INGESTION_CONFIG).get(
+            default_config = load_json(PATH_INGESTION_CONFIG).get(
                 job_name, None
             )
             updated_config = (
@@ -48,8 +119,15 @@ def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
             )
             end_time = None
             status = 0
-            errors = None
+            error = None
             num_records = None
+            config_file = runtime_config.get('config_file', None)
+            if config_file:
+                config_file = (
+                    Path(config_file)
+                    .relative_to(PATH_INGESTION_FOLDER)
+                    .as_posix()
+                )
 
             try:
                 result = func(*args, **kwargs)
@@ -63,10 +141,10 @@ def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
                         num_records = 0
                 return result
             except Exception:
-                errors = traceback.format_exc()
+                error = traceback.format_exc()
                 raise
             finally:
-                end_time = current_timestamp()
+                end_time = current_timestamp(precision='ms')
                 db_name = runtime_config.get('database', 'ingestion.db')
                 if not db_name.endswith('.db'):
                     db_name = f'{db_name}.db'
@@ -89,8 +167,9 @@ def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
                                 'start_time': start_time,
                                 'end_time': end_time,
                                 'status': status,
-                                'errors': errors,
+                                'error': error,
                                 'num_records': num_records,
+                                'config_file': config_file,
                             }
                         ],
                     )

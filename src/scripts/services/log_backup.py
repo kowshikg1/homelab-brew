@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.utils.decorator_utils import telegram_alert
+from src.utils.decorator_utils import script_execution_audit, telegram_alert
 from src.utils.file import load_yaml
 from src.utils.log_util import get_logger
 
@@ -67,7 +67,6 @@ def _rsync(src: Path, dest: Path) -> None:
         raise RuntimeError(f'rsync failed: {result.stderr.strip()}')
 
 
-@telegram_alert()
 def backup_hdd(config: LogBackupConfig) -> None:
     hdd = config.hdd
     if not hdd.enabled:
@@ -83,7 +82,6 @@ def backup_hdd(config: LogBackupConfig) -> None:
     log.info('HDD log backup complete → %s', dest)
 
 
-@telegram_alert()
 def backup_cloud(config: LogBackupConfig) -> None:
     cloud = config.cloud
     if not cloud.enabled:
@@ -119,6 +117,8 @@ def backup_cloud(config: LogBackupConfig) -> None:
     log.info('Cloud log backup complete → %s', remote_dest)
 
 
+@telegram_alert()
+@script_execution_audit()
 def main() -> None:
     parser = argparse.ArgumentParser(
         description='Backup logs/ to HDD and cloud'

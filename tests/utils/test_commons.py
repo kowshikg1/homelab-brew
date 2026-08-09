@@ -200,6 +200,24 @@ class TestCurrentTimestamp:
         ts2 = current_timestamp()
         assert ts2 >= ts1
 
+    def test_millisecond_precision(self):
+        ts_ms = current_timestamp(precision='ms')
+        ts_s = current_timestamp(precision='s')
+        assert isinstance(ts_ms, int)
+        assert ts_ms >= ts_s * 1000
+
+    def test_microsecond_precision(self):
+        ts_us = current_timestamp(precision='us')
+        ts_ms = current_timestamp(precision='ms')
+        assert isinstance(ts_us, int)
+        assert ts_us >= ts_ms * 1000
+
+    def test_invalid_precision_raises(self):
+        import pytest
+
+        with pytest.raises(ValueError, match='precision must be one of'):
+            current_timestamp(precision='ns')
+
 
 # ---------------------------------------------------------------------------
 # get_git_head

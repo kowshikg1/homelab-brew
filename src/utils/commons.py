@@ -34,9 +34,22 @@ def to_text(value: Any) -> str:
         return str(value)
 
 
-def current_timestamp(tz=UTC) -> int:
-    """Get the current epoch timestamp in seconds."""
-    return int(datetime.now(tz).timestamp())
+def current_timestamp(tz=UTC, precision: str = 's') -> int:
+    """Get the current epoch timestamp with configurable precision.
+
+    precision:
+        - 's'  : seconds (default)
+        - 'ms' : milliseconds
+        - 'us' : microseconds
+    """
+    ts = datetime.now(tz).timestamp()
+    if precision == 's':
+        return int(ts)
+    if precision == 'ms':
+        return int(ts * 1000)
+    if precision == 'us':
+        return int(ts * 1_000_000)
+    raise ValueError("precision must be one of: 's', 'ms', 'us'")
 
 
 def get_git_head(short: bool = False) -> str | None:

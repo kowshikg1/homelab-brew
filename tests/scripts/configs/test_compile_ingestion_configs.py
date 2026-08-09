@@ -47,6 +47,11 @@ class TestCompileIngestion:
         result = json.loads(output_path.read_text())
         assert 'my_job' in result
         assert result['my_job']['handler'] == 'strava'
+        actual = Path(result['my_job']['config_file'])
+        assert actual.as_posix() in {
+            'job1.yml',
+            (ingestion_dir / 'job1.yml').as_posix(),
+        }
 
     def test_inactive_job_stored_as_none(self, tmp_path):
         ingestion_dir = tmp_path / 'ingestion'
@@ -147,6 +152,16 @@ class TestCompileIngestion:
         result = json.loads(output_path.read_text())
         assert 'job_a' in result
         assert 'job_b' in result
+        actual_a = Path(result['job_a']['config_file'])
+        actual_b = Path(result['job_b']['config_file'])
+        assert actual_a.as_posix() in {
+            'a.yml',
+            (ingestion_dir / 'a.yml').as_posix(),
+        }
+        assert actual_b.as_posix() in {
+            'b.yml',
+            (ingestion_dir / 'b.yml').as_posix(),
+        }
 
     def test_empty_directory_creates_empty_config(self, tmp_path):
         ingestion_dir = tmp_path / 'ingestion'
@@ -213,3 +228,8 @@ class TestCompileIngestion:
 
         result = json.loads(output_path.read_text())
         assert 'deep_job' in result
+        actual = Path(result['deep_job']['config_file'])
+        assert actual.as_posix() in {
+            'subdir/deep_job.yml',
+            (ingestion_dir / 'subdir' / 'deep_job.yml').as_posix(),
+        }

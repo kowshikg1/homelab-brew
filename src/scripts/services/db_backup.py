@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from src.utils.decorator_utils import telegram_alert
+from src.utils.decorator_utils import script_execution_audit, telegram_alert
 from src.utils.file import load_yaml
 from src.utils.log_util import get_logger
 
@@ -120,7 +120,6 @@ def _prune_old_snapshots(backup_root: Path, retention_count: int) -> None:
         log.info('Pruned old snapshot: %s', old)
 
 
-@telegram_alert()
 def backup_hdd(config: BackupConfig) -> None:
     hdd = config.hdd
     if not hdd.enabled:
@@ -138,7 +137,6 @@ def backup_hdd(config: BackupConfig) -> None:
     log.info('HDD backup complete → %s', dest)
 
 
-@telegram_alert()
 def backup_cloud(config: BackupConfig) -> None:
     cloud = config.cloud
     if not cloud.enabled:
@@ -205,6 +203,8 @@ def backup_cloud(config: BackupConfig) -> None:
             log.info('Pruned old cloud snapshot: %s', old)
 
 
+@telegram_alert()
+@script_execution_audit()
 def main() -> None:
     parser = argparse.ArgumentParser(description='Backup data/ databases')
     parser.add_argument(

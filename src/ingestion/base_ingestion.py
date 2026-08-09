@@ -9,7 +9,7 @@ import click
 from src.handlers.sqlite import SQLiteHandler
 from src.ingestion.ingestion_map import get_handler_class
 from src.utils.decorator_utils import ingestion_audit, telegram_alert, timeout
-from src.utils.file import load_yaml
+from src.utils.file import load_json
 from src.utils.log_util import get_logger
 from src.utils.path_variables import PATH_INGESTION_CONFIG
 
@@ -80,6 +80,7 @@ class BaseIngestion:
     description: str = ''
     is_active: bool = True
     schedule: str = None
+    config_file: str = None
     logging: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -150,7 +151,7 @@ def run(config: dict) -> int:
     help='Override config using key=value. Can be repeated.',
 )
 def main(job_name, overrides):
-    config = load_yaml(PATH_INGESTION_CONFIG).get(job_name, None)
+    config = load_json(PATH_INGESTION_CONFIG).get(job_name, None)
     if not config:
         raise ValueError(f"Ingestion job '{job_name}' not found or not active.")
     config = _apply_overrides(config, overrides)

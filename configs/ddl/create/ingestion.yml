@@ -11,5 +11,21 @@
       - start_time INTEGER NOT NULL
       - end_time INTEGER
       - status INTEGER CHECK(status IN (0, 1)) # 0: failure, 1: success
-      - errors TEXT
+      - error TEXT
       - num_records INTEGER
+      - config_file TEXT # relative to configs/ingestion
+
+- method: CREATE
+  params:
+    database: ingestion
+    table_name: script_execution_audit
+    columns:
+      - id TEXT PRIMARY KEY
+      - execution_id TEXT # currently null
+      - script_name TEXT NOT NULL
+      - args TEXT
+      - commit_hash TEXT NOT NULL
+      - start_time INTEGER NOT NULL
+      - end_time INTEGER
+      - status INTEGER CHECK(status IN (0, 1)) # 0: failure, 1: success
+      - error TEXT

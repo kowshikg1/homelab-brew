@@ -2,6 +2,7 @@
 
 import logging
 import time
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,9 +11,11 @@ from src.utils.decorator_utils import (
     _alert_context,
     _TelegramAlertHandler,
     ingestion_audit,
+    script_execution_audit,
     telegram_alert,
     timeout,
 )
+from src.utils.path_variables import PATH_INGESTION_FOLDER
 
 # ---------------------------------------------------------------------------
 # _TelegramAlertHandler
@@ -327,17 +330,23 @@ class TestIngestionAuditDecorator:
             'handler': 'strava',
             'extract_method': 'run',
             'table': 't',
+            'config_file': str(
+                Path(PATH_INGESTION_FOLDER) / 'system_stats.yml'
+            ),
         }
 
         with (
             patch(
-                'src.utils.decorator_utils.load_yaml',
+                'src.utils.decorator_utils.load_json',
                 return_value={
                     'job_a': {
                         'database': 'ingestion.db',
                         'handler': 'strava',
                         'extract_method': 'run',
                         'table': 't',
+                        'config_file': str(
+                            Path(PATH_INGESTION_FOLDER) / 'system_stats.yml'
+                        ),
                     }
                 },
             ),
@@ -361,6 +370,7 @@ class TestIngestionAuditDecorator:
         assert inserted_row['commit_hash'] == 'abc123'
         assert inserted_row['id']
         assert inserted_row['updated_config'] is None
+        assert inserted_row['config_file'] == 'system_stats.yml'
 
     def test_audit_failure_inserts_row_with_error(self):
         mock_sqlite = MagicMock()
@@ -375,17 +385,21 @@ class TestIngestionAuditDecorator:
             'handler': 'strava',
             'extract_method': 'run',
             'table': 'runtime_table',
+            'config_file': str(Path(PATH_INGESTION_FOLDER) / 'strava.yml'),
         }
 
         with (
             patch(
-                'src.utils.decorator_utils.load_yaml',
+                'src.utils.decorator_utils.load_json',
                 return_value={
                     'job_b': {
                         'database': 'ingestion.db',
                         'handler': 'strava',
                         'extract_method': 'run',
                         'table': 'default_table',
+                        'config_file': str(
+                            Path(PATH_INGESTION_FOLDER) / 'strava.yml'
+                        ),
                     }
                 },
             ),
@@ -405,5 +419,69 @@ class TestIngestionAuditDecorator:
         inserted_row = mock_sqlite.insert_data.call_args.kwargs['data'][0]
         assert inserted_row['job_name'] == 'job_b'
         assert inserted_row['status'] == 0
-        assert 'ValueError' in inserted_row['errors']
+        assert 'ValueError' in inserted_row['error']
         assert inserted_row['updated_config'] is not None
+        assert inserted_row['config_file'] == 'strava.yml'
+
+
+# ---------------------------------------------------------------------------
+# script_execution_audit decorator
+# ---------------------------------------------------------------------------
+
+
+class TestScriptExecutionAuditDecorator:
+    def test_script_audit_success_inserts_expected_fields(self):
+        mock_sqlite = MagicMock()
+
+        @script_execution_audit(table_name='script_execution_audit')
+        def sample_script():
+            return 'ok'
+
+        with (
+            patch(
+                'src.utils.decorator_utils.SQLiteHandler',
+                return_value=mock_sqlite,
+            ),
+            patch(
+                'src.utils.decorator_utils.get_git_head',
+                return_value='abc123',
+            ),
+            patch('src.utils.decorator_utils.sys.argv', ['test_runner']),
+        ):
+            result = sample_script()
+
+        assert result == 'ok'
+        mock_sqlite.insert_data.assert_called_once()
+        inserted = mock_sqlite.insert_data.call_args.kwargs['data'][0]
+        assert inserted['id']
+        assert inserted['execution_id'] is None
+        assert inserted['script_name'] == 'test_decorator_utils.py'
+        assert inserted['commit_hash'] == 'abc123'
+        assert inserted['status'] == 1
+        assert inserted['error'] is None
+        assert inserted['args'] == '[]'
+
+    def test_script_audit_failure_stores_full_traceback(self):
+        mock_sqlite = MagicMock()
+
+        @script_execution_audit(table_name='script_execution_audit')
+        def failing_script():
+            raise RuntimeError('boom')
+
+        with (
+            patch(
+                'src.utils.decorator_utils.SQLiteHandler',
+                return_value=mock_sqlite,
+            ),
+            patch(
+                'src.utils.decorator_utils.get_git_head',
+                return_value='abc123',
+            ),
+        ):
+            with pytest.raises(RuntimeError, match='boom'):
+                failing_script()
+
+        inserted = mock_sqlite.insert_data.call_args.kwargs['data'][0]
+        assert inserted['status'] == 0
+        assert 'Traceback' in inserted['error']
+        assert 'RuntimeError: boom' in inserted['error']

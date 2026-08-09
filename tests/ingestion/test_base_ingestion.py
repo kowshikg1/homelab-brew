@@ -1,5 +1,6 @@
 """Tests for src/ingestion/base_ingestion.py"""
 
+import inspect
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -285,8 +286,8 @@ class TestRun:
         return config
 
     def _raw_run(self):
-        # unwrap all decorators: timeout(600) -> telegram_alert -> ingestion_audit -> timeout(300)
-        return run.__wrapped__.__wrapped__.__wrapped__.__wrapped__
+        # Always execute the undecorated function body in unit tests.
+        return inspect.unwrap(run)
 
     def test_run_calls_extract_method(self):
         mock_instance = MagicMock()
