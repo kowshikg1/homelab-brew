@@ -23,8 +23,30 @@ def send_message(message: str, chat_id: str = None) -> None:
     }
 
     response = requests.post(url, json=payload)
-    if response.status_code != 200:
-        log.error(f'Failed to send telegram message: {response.text}')
+    if response.status_code == 200:
+        return
+
+    # Tracebacks/logs often include characters that break Markdown entity parsing.
+    # Retry once without parse_mode so the alert still gets delivered.
+    response_text = (response.text or '').lower()
+    if response.status_code == 400 and "can't parse entities" in response_text:
+        fallback_payload = {
+            'chat_id': chat_id,
+            'text': message,
+        }
+        fallback_response = requests.post(url, json=fallback_payload)
+        if fallback_response.status_code == 200:
+            log.warning(
+                'Telegram Markdown parse failed; sent message as plain text.'
+            )
+            return
+        log.error(
+            'Failed to send telegram message after fallback: '
+            f'{fallback_response.text}'
+        )
+        return
+
+    log.error(f'Failed to send telegram message: {response.text}')
 
 
 def get_chat_id() -> str:

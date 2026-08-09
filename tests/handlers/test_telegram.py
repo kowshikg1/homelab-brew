@@ -131,6 +131,49 @@ class TestSendMessage:
 
         assert result is None
 
+    def test_retries_without_markdown_on_parse_error(self):
+        markdown_error = MagicMock()
+        markdown_error.status_code = 400
+        markdown_error.text = (
+            '{"ok":false,"error_code":400,'
+            '"description":"Bad Request: can\'t parse entities"}'
+        )
+
+        fallback_ok = MagicMock()
+        fallback_ok.status_code = 200
+
+        with patch(
+            'src.handlers.telegram.requests.post',
+            side_effect=[markdown_error, fallback_ok],
+        ) as mock_post:
+            send_message('bad_markdown_content')
+
+        assert mock_post.call_count == 2
+        first_payload = mock_post.call_args_list[0].kwargs['json']
+        second_payload = mock_post.call_args_list[1].kwargs['json']
+        assert first_payload['parse_mode'] == 'Markdown'
+        assert 'parse_mode' not in second_payload
+
+    def test_logs_error_when_fallback_also_fails(self, caplog):
+        markdown_error = MagicMock()
+        markdown_error.status_code = 400
+        markdown_error.text = "Bad Request: can't parse entities"
+
+        fallback_fail = MagicMock()
+        fallback_fail.status_code = 500
+        fallback_fail.text = 'Internal Server Error'
+
+        import logging
+
+        with patch(
+            'src.handlers.telegram.requests.post',
+            side_effect=[markdown_error, fallback_fail],
+        ):
+            with caplog.at_level(logging.ERROR):
+                send_message('bad_markdown_content')
+
+        assert any('after fallback' in r.message for r in caplog.records)
+
 
 # ---------------------------------------------------------------------------
 # get_chat_id
