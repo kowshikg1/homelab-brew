@@ -14,9 +14,10 @@ repos:
         language: python
       - id: run-tests
         name: Run tests before pushing
-        entry: pytest
+        entry: pytest tests
         language: system
-        types: [python]
+        pass_filenames: false
+        always_run: true
         stages: [pre-push]
   
   - repo: https://github.com/astral-sh/ruff-pre-commit

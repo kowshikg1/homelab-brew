@@ -1,5 +1,6 @@
 import hashlib
 import json
+import subprocess
 from collections import deque
 from datetime import UTC, datetime
 from typing import Any
@@ -36,3 +37,20 @@ def to_text(value: Any) -> str:
 def current_timestamp(tz=UTC) -> int:
     """Get the current epoch timestamp in seconds."""
     return int(datetime.now(tz).timestamp())
+
+
+def get_git_head(short: bool = False) -> str | None:
+    """Return current HEAD commit hash for traceability."""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--short', 'HEAD']
+            if short
+            else ['git', 'rev-parse', 'HEAD'],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        commit_hash = result.stdout.strip()
+        return commit_hash or None
+    except Exception:
+        return None

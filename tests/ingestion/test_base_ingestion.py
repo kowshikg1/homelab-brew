@@ -8,6 +8,7 @@ from src.ingestion.base_ingestion import (
     BaseIngestion,
     ExtractMode,
     PublishMode,
+    _apply_overrides,
     insert_data_to_db,
     run,
 )
@@ -63,6 +64,7 @@ def mock_strava_class():
 class TestBaseIngestion:
     def _make_job(self, overrides=None, mock_handler_class=None):
         defaults = dict(
+            job_name='my_job',
             handler='strava',
             extract_method='get_activities',
             table='activities',
@@ -87,7 +89,10 @@ class TestBaseIngestion:
             return_value=mock_cls,
         ) as mock_get:
             job = BaseIngestion(
-                handler='strava', extract_method='get_activities', table='t'
+                job_name='my_job',
+                handler='strava',
+                extract_method='get_activities',
+                table='t',
             )
         mock_get.assert_called_once_with('strava')
         assert job.handler_class is mock_cls
@@ -100,7 +105,10 @@ class TestBaseIngestion:
             return_value=mock_cls,
         ):
             job = BaseIngestion(
-                handler='strava', extract_method='get_activities', table='t'
+                job_name='my_job',
+                handler='strava',
+                extract_method='get_activities',
+                table='t',
             )
         assert job.handler_instance is mock_instance
 
@@ -111,6 +119,7 @@ class TestBaseIngestion:
             return_value=mock_cls,
         ):
             BaseIngestion(
+                job_name='my_job',
                 handler='strava',
                 extract_method='run',
                 table='t',
@@ -124,6 +133,7 @@ class TestBaseIngestion:
             'src.ingestion.base_ingestion.get_handler_class'
         ) as mock_get:
             BaseIngestion(
+                job_name='my_job',
                 handler='strava',
                 extract_method='run',
                 table='t',
@@ -173,6 +183,7 @@ class TestInsertDataToDB:
             return_value=mock_cls,
         ):
             job = BaseIngestion(
+                job_name='my_job',
                 handler='strava',
                 extract_method='run',
                 table='test_table',
@@ -260,38 +271,30 @@ class TestInsertDataToDB:
 
 
 class TestRun:
-    def _yaml_config(self, extra=None):
+    def _config(self, extra=None):
         config = {
-            'my_job': {
-                'handler': 'strava',
-                'extract_method': 'get_activities',
-                'table': 'activities',
-                'id_config_col': 'id',
-                'watermark_col': 'start_date',
-            }
+            'job_name': 'my_job',
+            'handler': 'strava',
+            'extract_method': 'get_activities',
+            'table': 'activities',
+            'id_config_col': 'id',
+            'watermark_col': 'start_date',
         }
         if extra:
-            config['my_job'].update(extra)
+            config.update(extra)
         return config
 
-    def test_raises_when_job_not_found(self):
-        with (
-            patch('src.ingestion.base_ingestion.load_yaml', return_value={}),
-            patch('src.utils.decorator_utils.send_message'),
-        ):
-            with pytest.raises(ValueError, match='not found or not active'):
-                run('missing_job')
+    def _raw_run(self):
+        # unwrap all decorators: timeout(600) -> telegram_alert -> ingestion_audit -> timeout(300)
+        return run.__wrapped__.__wrapped__.__wrapped__.__wrapped__
 
     def test_run_calls_extract_method(self):
         mock_instance = MagicMock()
         mock_instance.get_activities.return_value = [{'id': 1}]
         mock_cls = MagicMock(return_value=mock_instance)
+        raw_run = self._raw_run()
 
         with (
-            patch(
-                'src.ingestion.base_ingestion.load_yaml',
-                return_value=self._yaml_config(),
-            ),
             patch(
                 'src.ingestion.base_ingestion.get_handler_class',
                 return_value=mock_cls,
@@ -299,11 +302,10 @@ class TestRun:
             patch(
                 'src.ingestion.base_ingestion.SQLiteHandler'
             ) as mock_sqlite_cls,
-            patch('src.utils.decorator_utils.send_message'),
         ):
             mock_sqlite_cls.return_value.get_last_mtime.return_value = None
             mock_sqlite_cls.return_value.upsert_data.return_value = None
-            run('my_job')
+            raw_run(self._config())
 
         mock_instance.get_activities.assert_called_once()
 
@@ -315,12 +317,9 @@ class TestRun:
         mock_sqlite = MagicMock()
         mock_sqlite.get_last_mtime.return_value = '2024-01-01'
         mock_sqlite.upsert_data.return_value = None
+        raw_run = self._raw_run()
 
         with (
-            patch(
-                'src.ingestion.base_ingestion.load_yaml',
-                return_value=self._yaml_config(),
-            ),
             patch(
                 'src.ingestion.base_ingestion.get_handler_class',
                 return_value=mock_cls,
@@ -329,9 +328,8 @@ class TestRun:
                 'src.ingestion.base_ingestion.SQLiteHandler',
                 return_value=mock_sqlite,
             ),
-            patch('src.utils.decorator_utils.send_message'),
         ):
-            run('my_job')
+            raw_run(self._config())
 
         mock_sqlite.get_last_mtime.assert_called_once()
 
@@ -344,12 +342,9 @@ class TestRun:
 
         mock_sqlite = MagicMock()
         mock_sqlite.get_last_mtime.return_value = None
+        raw_run = self._raw_run()
 
         with (
-            patch(
-                'src.ingestion.base_ingestion.load_yaml',
-                return_value=self._yaml_config(),
-            ),
             patch(
                 'src.ingestion.base_ingestion.get_handler_class',
                 return_value=mock_cls,
@@ -358,8 +353,40 @@ class TestRun:
                 'src.ingestion.base_ingestion.SQLiteHandler',
                 return_value=mock_sqlite,
             ),
-            patch('src.utils.decorator_utils.send_message'),
         ):
-            run('my_job')
+            raw_run(self._config())
 
         mock_sqlite.upsert_data.assert_called_once()
+
+
+class TestApplyOverrides:
+    def test_applies_supported_overrides(self):
+        config = {
+            'job_name': 'my_job',
+            'handler': 'strava',
+            'extract_method': 'run',
+            'table': 'activities',
+            'extract_params': {},
+        }
+        updated = _apply_overrides(
+            config,
+            (
+                'publish_mode="APPEND"',
+                'send_notification=true',
+                'extract_params={"limit":10}',
+            ),
+        )
+
+        assert updated['publish_mode'] == 'APPEND'
+        assert updated['send_notification'] is True
+        assert updated['extract_params'] == {'limit': 10}
+
+    def test_rejects_invalid_override_format(self):
+        config = {
+            'job_name': 'my_job',
+            'handler': 'strava',
+            'extract_method': 'run',
+            'table': 'activities',
+        }
+        with pytest.raises(Exception, match='key=value'):
+            _apply_overrides(config, ('invalid_override',))

@@ -1,4 +1,5 @@
 import functools
+import json
 import logging
 import signal
 import threading
@@ -8,13 +9,99 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import Any
 
+from src.handlers.sqlite import SQLiteHandler
 from src.handlers.telegram import send_message
+from src.utils.commons import current_timestamp, get_git_head, hash_object
+from src.utils.file import load_yaml
 from src.utils.log_util import get_logger
+from src.utils.path_variables import PATH_INGESTION_CONFIG
 
 log = get_logger(__name__)
 
 # Thread-local storage to prevent infinite loops
 _alert_context = threading.local()
+
+
+def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
+    """Decorator to persist ingestion execution audit records."""
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            run_id = None
+            runtime_config = (
+                args[0].copy() if args else kwargs.get('config', {}).copy()
+            )
+            job_name = runtime_config.pop(
+                'job_name'
+            )  # remove job_name from runtime_config as it's populated
+            start_time = current_timestamp()
+            commit_hash = get_git_head()
+            id = hash_object((run_id, job_name, start_time, commit_hash))
+            default_config = load_yaml(PATH_INGESTION_CONFIG).get(
+                job_name, None
+            )
+            updated_config = (
+                runtime_config
+                if hash_object(runtime_config) != hash_object(default_config)
+                else None
+            )
+            end_time = None
+            status = 0
+            errors = None
+            num_records = None
+
+            try:
+                result = func(*args, **kwargs)
+                status = 1
+                if isinstance(result, int):
+                    num_records = result
+                else:
+                    try:
+                        num_records = len(result)
+                    except TypeError:
+                        num_records = 0
+                return result
+            except Exception:
+                errors = traceback.format_exc()
+                raise
+            finally:
+                end_time = current_timestamp()
+                db_name = runtime_config.get('database', 'ingestion.db')
+                if not db_name.endswith('.db'):
+                    db_name = f'{db_name}.db'
+
+                try:
+                    sqlite_handler = SQLiteHandler(f'./data/{db_name}')
+                    sqlite_handler.insert_data(
+                        table_name=table_name,
+                        data=[
+                            {
+                                'id': id,
+                                'run_id': run_id,
+                                'job_name': job_name,
+                                'commit_hash': commit_hash,
+                                'updated_config': (
+                                    json.dumps(updated_config, default=str)
+                                    if isinstance(updated_config, dict)
+                                    else None
+                                ),
+                                'start_time': start_time,
+                                'end_time': end_time,
+                                'status': status,
+                                'errors': errors,
+                                'num_records': num_records,
+                            }
+                        ],
+                    )
+                except Exception as exc:
+                    log.warning(
+                        f'Failed to insert audit row into {table_name}: {exc}'
+                    )
+
+        return wrapper
+
+    return decorator
 
 
 class _TelegramAlertHandler(logging.Handler):

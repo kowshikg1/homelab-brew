@@ -2,13 +2,14 @@
 
 import logging
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.utils.decorator_utils import (
     _alert_context,
     _TelegramAlertHandler,
+    ingestion_audit,
     telegram_alert,
     timeout,
 )
@@ -305,3 +306,104 @@ class TestTimeoutDecorator:
         run()
         assert result_holder
         assert 'my_slow_function' in result_holder[0]
+
+
+# ---------------------------------------------------------------------------
+# ingestion_audit decorator
+# ---------------------------------------------------------------------------
+
+
+class TestIngestionAuditDecorator:
+    def test_audit_success_inserts_row_with_status_true(self):
+        mock_sqlite = MagicMock()
+
+        @ingestion_audit()
+        def sample_job(config):
+            return 3
+
+        config = {
+            'job_name': 'job_a',
+            'database': 'ingestion.db',
+            'handler': 'strava',
+            'extract_method': 'run',
+            'table': 't',
+        }
+
+        with (
+            patch(
+                'src.utils.decorator_utils.load_yaml',
+                return_value={
+                    'job_a': {
+                        'database': 'ingestion.db',
+                        'handler': 'strava',
+                        'extract_method': 'run',
+                        'table': 't',
+                    }
+                },
+            ),
+            patch(
+                'src.utils.decorator_utils.SQLiteHandler',
+                return_value=mock_sqlite,
+            ),
+            patch(
+                'src.utils.decorator_utils.get_git_head',
+                return_value='abc123',
+            ),
+        ):
+            result = sample_job(config)
+
+        assert result == 3
+        mock_sqlite.insert_data.assert_called_once()
+        inserted_row = mock_sqlite.insert_data.call_args.kwargs['data'][0]
+        assert inserted_row['job_name'] == 'job_a'
+        assert inserted_row['status'] == 1
+        assert inserted_row['num_records'] == 3
+        assert inserted_row['commit_hash'] == 'abc123'
+        assert inserted_row['id']
+        assert inserted_row['updated_config'] is None
+
+    def test_audit_failure_inserts_row_with_error(self):
+        mock_sqlite = MagicMock()
+
+        @ingestion_audit()
+        def failing_job(config):
+            raise ValueError('ingestion failed')
+
+        config = {
+            'job_name': 'job_b',
+            'database': 'ingestion.db',
+            'handler': 'strava',
+            'extract_method': 'run',
+            'table': 'runtime_table',
+        }
+
+        with (
+            patch(
+                'src.utils.decorator_utils.load_yaml',
+                return_value={
+                    'job_b': {
+                        'database': 'ingestion.db',
+                        'handler': 'strava',
+                        'extract_method': 'run',
+                        'table': 'default_table',
+                    }
+                },
+            ),
+            patch(
+                'src.utils.decorator_utils.SQLiteHandler',
+                return_value=mock_sqlite,
+            ),
+            patch(
+                'src.utils.decorator_utils.get_git_head',
+                return_value='abc123',
+            ),
+        ):
+            with pytest.raises(ValueError, match='ingestion failed'):
+                failing_job(config)
+
+        mock_sqlite.insert_data.assert_called_once()
+        inserted_row = mock_sqlite.insert_data.call_args.kwargs['data'][0]
+        assert inserted_row['job_name'] == 'job_b'
+        assert inserted_row['status'] == 0
+        assert 'ValueError' in inserted_row['errors']
+        assert inserted_row['updated_config'] is not None

@@ -1,0 +1,15 @@
+- method: CREATE
+  params:
+    database: ingestion
+    table_name: ingest_audit
+    columns:
+      - id TEXT PRIMARY KEY
+      - run_id TEXT # No run_id being generated for now
+      - job_name TEXT
+      - commit_hash TEXT NOT NULL
+      - updated_config TEXT
+      - start_time INTEGER NOT NULL
+      - end_time INTEGER
+      - status INTEGER CHECK(status IN (0, 1)) # 0: failure, 1: success
+      - errors TEXT
+      - num_records INTEGER

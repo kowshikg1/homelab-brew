@@ -2,8 +2,14 @@
 
 from collections import deque
 from datetime import UTC, datetime, timedelta, timezone
+from unittest.mock import Mock, patch
 
-from src.utils.commons import current_timestamp, hash_object, to_text
+from src.utils.commons import (
+    current_timestamp,
+    get_git_head,
+    hash_object,
+    to_text,
+)
 
 # ---------------------------------------------------------------------------
 # hash_object
@@ -193,3 +199,24 @@ class TestCurrentTimestamp:
         time.sleep(0.01)
         ts2 = current_timestamp()
         assert ts2 >= ts1
+
+
+# ---------------------------------------------------------------------------
+# get_git_head
+# ---------------------------------------------------------------------------
+
+
+class TestGetGitHeadCommit:
+    def test_returns_commit_hash(self):
+        mock_result = Mock(stdout='abc123\n')
+        with patch(
+            'src.utils.commons.subprocess.run', return_value=mock_result
+        ):
+            assert get_git_head() == 'abc123'
+
+    def test_returns_none_when_command_fails(self):
+        with patch(
+            'src.utils.commons.subprocess.run',
+            side_effect=Exception('git not available'),
+        ):
+            assert get_git_head() is None

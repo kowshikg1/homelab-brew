@@ -15,7 +15,7 @@ INGESTION_JOB_NAME:
     param1: value1
     param2: value2
   schedule: 0 0 * * * # Cron schedule for the ingestion
-  database: database_name # Database name to use for this ingestion(default: ingestions)
+  database: database_name # Database name to use for this ingestion(default: ingestion)
   table: table_name # Table name to use for this ingestion
   id_config_col: col_name # Column name to use as unique identifier for upsert operations, only applicable when publish_mode is UPSERT.(currently only support one column)
   watermark_col: col_name # Optional but good to have for incremental ingestion. max(watermark_col)) will be used as the new watermark after each ingestion.
