@@ -2,6 +2,7 @@ import hashlib
 import json
 import subprocess
 from collections import deque
+from collections.abc import Generator
 from datetime import UTC, datetime
 from typing import Any
 
@@ -67,3 +68,30 @@ def get_git_head(short: bool = False) -> str | None:
         return commit_hash or None
     except Exception:
         return None
+
+
+def resize_list_iter(
+    lst: Generator[list[Any], None, None], size: int
+) -> Generator[list[Any], None, None]:
+    """Yield successive `size`-sized chunks from `lst`."""
+    if size <= 0:
+        raise ValueError('size must be a positive integer')
+
+    excess = []
+
+    for sublist in lst:
+        if excess:
+            excess.extend(sublist)
+            sublist = excess
+            excess = []
+        i = 0
+        n = len(sublist)
+        while i + size <= n:
+            yield sublist[i : i + size]
+            i += size
+
+        if i < n:
+            excess = sublist[i:]
+
+    if excess:
+        yield excess

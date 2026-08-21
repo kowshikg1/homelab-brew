@@ -8,6 +8,7 @@ from src.utils.commons import (
     current_timestamp,
     get_git_head,
     hash_object,
+    resize_list_iter,
     to_text,
 )
 
@@ -232,9 +233,61 @@ class TestGetGitHeadCommit:
         ):
             assert get_git_head() == 'abc123'
 
+    def test_uses_short_flag_when_requested(self):
+        mock_result = Mock(stdout='abc123\n')
+        with patch(
+            'src.utils.commons.subprocess.run', return_value=mock_result
+        ) as run_mock:
+            result = get_git_head(short=True)
+
+        assert result == 'abc123'
+        run_mock.assert_called_once_with(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_returns_none_when_stdout_is_empty(self):
+        mock_result = Mock(stdout='  \n')
+        with patch(
+            'src.utils.commons.subprocess.run', return_value=mock_result
+        ):
+            assert get_git_head() is None
+
     def test_returns_none_when_command_fails(self):
         with patch(
             'src.utils.commons.subprocess.run',
             side_effect=Exception('git not available'),
         ):
             assert get_git_head() is None
+
+
+# ---------------------------------------------------------------------------
+# resize_list_iter
+# ---------------------------------------------------------------------------
+
+
+class TestResizeListIter:
+    def test_exact_chunks(self):
+        data = iter([[1, 2], [3, 4], [5, 6]])
+        assert list(resize_list_iter(data, 2)) == [[1, 2], [3, 4], [5, 6]]
+
+    def test_rechunks_across_boundaries(self):
+        data = iter([[1], [2, 3, 4], [5]])
+        assert list(resize_list_iter(data, 2)) == [[1, 2], [3, 4], [5]]
+
+    def test_size_larger_than_total_yields_single_remainder(self):
+        data = iter([[1, 2], [3]])
+        assert list(resize_list_iter(data, 10)) == [[1, 2, 3]]
+
+    def test_empty_input(self):
+        data = iter([])
+        assert list(resize_list_iter(data, 3)) == []
+
+    def test_invalid_size_raises(self):
+        import pytest
+
+        data = iter([[1, 2, 3]])
+        with pytest.raises(ValueError, match='size must be a positive integer'):
+            list(resize_list_iter(data, 0))

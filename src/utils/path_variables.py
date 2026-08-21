@@ -12,7 +12,9 @@ PATH_COMPILED_SERVICES_CATALOG = Path('./configs/cache/services-catalog.json')
 
 # Paths
 PATH_INGESTION_FOLDER = Path('./configs/ingestion')
+PATH_DDL_FOLDER = Path('./configs/ddl')
 
 # SQLite
+SQLITE_DB_FOLDER = Path('./data')
 DEFAULT_SQLITE_DB = './data/data.db'
 INGESTION_SQLITE_DB = './data/ingestion.db'

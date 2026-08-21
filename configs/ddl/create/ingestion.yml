@@ -29,3 +29,16 @@
       - end_time INTEGER
       - status INTEGER CHECK(status IN (0, 1)) # 0: failure, 1: success
       - error TEXT
+
+- method: CREATE
+  params:
+    database: ingestion
+    table_name: ingest_ddl
+    columns:
+      - id TEXT PRIMARY KEY
+      - method TEXT NOT NULL
+      - tag
+      - order INTEGER
+      - params TEXT NOT NULL
+      - commit_hash TEXT
+      - created_at TEXT DEFAULT CURRENT_TIMESTAMP
