@@ -54,6 +54,7 @@ def run_configs(
     queries = [q for cfg in configs for q in get_queries(cfg)]
     commit_hash = get_git_head()
     try:
+        # FIXME: Avoid/fix database cross references.
         with sqlite3.connect(INGESTION_SQLITE_DB) as conn:
             for db in unique_databases:
                 db_path = SQLITE_DB_FOLDER / f'{db}.db'
