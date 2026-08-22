@@ -23,6 +23,10 @@ from src.utils.path_variables import (
 
 log = get_logger(__name__)
 
+DEFAULT_TIME_PRECISION = (
+    'ms'  # if precision changes, update src/monitor/handlers/jobs.py
+)
+
 # Thread-local storage to prevent infinite loops
 _alert_context = threading.local()
 
@@ -38,7 +42,7 @@ def script_execution_audit(
         def wrapper(*args, **kwargs):
             execution_id = None  # Unique identifier for the script execution, currently null
             script_name = Path(func.__code__.co_filename).name
-            start_time = current_timestamp(precision='ms')
+            start_time = current_timestamp(precision=DEFAULT_TIME_PRECISION)
             commit_hash = get_git_head()
 
             if args or kwargs:
@@ -64,7 +68,7 @@ def script_execution_audit(
                 error = traceback.format_exc()
                 raise
             finally:
-                end_time = current_timestamp(precision='ms')
+                end_time = current_timestamp(precision=DEFAULT_TIME_PRECISION)
                 try:
                     sqlite_handler = SQLiteHandler(db_path)
                     sqlite_handler.insert_data(
@@ -106,7 +110,7 @@ def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
             job_name = runtime_config.pop(
                 'job_name'
             )  # remove job_name from runtime_config as it's populated
-            start_time = current_timestamp(precision='ms')
+            start_time = current_timestamp(precision=DEFAULT_TIME_PRECISION)
             commit_hash = get_git_head()
             id = hash_object((run_id, job_name, start_time, commit_hash))
             default_config = load_json(PATH_INGESTION_CONFIG).get(
@@ -117,10 +121,6 @@ def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
                 if hash_object(runtime_config) != hash_object(default_config)
                 else None
             )
-            end_time = None
-            status = 0
-            error = None
-            num_records = None
             config_file = runtime_config.get('config_file', None)
             if config_file:
                 config_file = (
@@ -128,54 +128,65 @@ def ingestion_audit(table_name: str = 'ingest_audit') -> Callable:
                     .relative_to(PATH_INGESTION_FOLDER)
                     .as_posix()
                 )
-
+            audit_data = {
+                'id': id,
+                'run_id': run_id,
+                'job_name': job_name,
+                'commit_hash': commit_hash,
+                'updated_config': (
+                    json.dumps(updated_config, default=str)
+                    if isinstance(updated_config, dict)
+                    else None
+                ),
+                'start_time': start_time,
+                'end_time': None,
+                'status': None,
+                'error': None,
+                'num_records': None,
+                'config_file': config_file,
+            }
             try:
-                result = func(*args, **kwargs)
-                status = 1
-                if isinstance(result, int):
-                    num_records = result
-                else:
-                    try:
-                        num_records = len(result)
-                    except TypeError:
-                        num_records = 0
-                return result
-            except Exception:
-                error = traceback.format_exc()
-                raise
-            finally:
-                end_time = current_timestamp(precision='ms')
                 db_name = runtime_config.get('database', 'ingestion.db')
                 if not db_name.endswith('.db'):
                     db_name = f'{db_name}.db'
-
+                sqlite_handler = SQLiteHandler(f'./data/{db_name}')
+                sqlite_handler.insert_data(
+                    table_name=table_name,
+                    data=[audit_data],
+                )
+            except Exception as exc:
+                log.warning(
+                    f'Failed to insert audit row into {table_name}: {exc}'
+                )
+            try:
+                result = func(*args, **kwargs)
+                audit_data['status'] = 1
+                if isinstance(result, int):
+                    audit_data['num_records'] = result
+                else:
+                    try:
+                        audit_data['num_records'] = len(result)
+                    except TypeError:
+                        audit_data['num_records'] = 0
+                return result
+            except Exception:
+                audit_data['error'] = traceback.format_exc()
+                audit_data['status'] = 0
+                raise
+            finally:
+                audit_data['end_time'] = current_timestamp(
+                    precision=DEFAULT_TIME_PRECISION
+                )
                 try:
                     sqlite_handler = SQLiteHandler(f'./data/{db_name}')
-                    sqlite_handler.insert_data(
+                    sqlite_handler.upsert_data(
                         table_name=table_name,
-                        data=[
-                            {
-                                'id': id,
-                                'run_id': run_id,
-                                'job_name': job_name,
-                                'commit_hash': commit_hash,
-                                'updated_config': (
-                                    json.dumps(updated_config, default=str)
-                                    if isinstance(updated_config, dict)
-                                    else None
-                                ),
-                                'start_time': start_time,
-                                'end_time': end_time,
-                                'status': status,
-                                'error': error,
-                                'num_records': num_records,
-                                'config_file': config_file,
-                            }
-                        ],
+                        data=[audit_data],
+                        unique_key='id',
                     )
                 except Exception as exc:
                     log.warning(
-                        f'Failed to insert audit row into {table_name}: {exc}'
+                        f'Failed to update audit row into {table_name}: {exc}'
                     )
 
         return wrapper

@@ -11,12 +11,16 @@ from src.utils.path_variables import (
     PATH_DDL_FOLDER,
     PATH_INGESTION_CONFIG,
     PATH_INGESTION_FOLDER,
+    PATH_MONITOR_FOLDER,
     PATH_SERVICES_CATALOG,
     SQLITE_DB_FOLDER,
 )
 
 
 class TestPathVariables:
+    def test_monitor_folder_constant(self):
+        assert PATH_MONITOR_FOLDER == Path('./configs/monitor')
+
     def test_env_file_global_is_path(self):
         assert isinstance(ENV_FILE_GLOBAL, Path)
 

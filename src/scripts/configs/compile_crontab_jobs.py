@@ -9,7 +9,11 @@ import click
 
 from src.handlers.env_manager import EnvManager
 from src.utils.file import load_yaml
-from src.utils.path_variables import ENV_FILE_GLOBAL, PATH_INGESTION_CONFIG
+from src.utils.path_variables import (
+    ENV_FILE_GLOBAL,
+    PATH_INGESTION_CONFIG,
+    PATH_MONITOR_FOLDER,
+)
 
 env = EnvManager(ENV_FILE_GLOBAL)
 
@@ -148,6 +152,15 @@ def _build_general_command(job_name: str, job_config: dict[str, Any]) -> str:
     return command
 
 
+def _build_monitor_command(job_name: str, job_config: dict[str, Any]) -> str:
+    python_bin = str(job_config.get('python_bin', '.venv/bin/python'))
+    runner_module = 'src.monitor.base_monitor'
+    command = f'{python_bin} -m {runner_module} {job_name}'
+    command = _with_lock(command, job_name, job_config)
+    command = _with_logging(command, job_name, job_config)
+    return command
+
+
 def _iter_yaml_files(folder: Path) -> list[Path]:
     if not folder.exists():
         return []
@@ -163,6 +176,7 @@ def compile_crontab_jobs(
     lines: list[str] = []
     normalized_project_root = shlex.quote(str(project_root.resolve()))
 
+    # Process ingestion jobs
     for job_name, job_config in load_yaml(compiled_ingestion_file).items():
         if not isinstance(job_config, dict):
             continue
@@ -182,6 +196,7 @@ def compile_crontab_jobs(
         command = _build_ingestion_command(str(job_name), job_config)
         lines.append(f'{schedule} cd {normalized_project_root} && {command}')
 
+    # Process general jobs
     for config_file in _iter_yaml_files(Path(general_jobs_folder)):
         if (
             config_file.resolve() == Path(output_file).resolve()
@@ -205,6 +220,34 @@ def compile_crontab_jobs(
                 'append_log', bool(job_config.get('log_file'))
             )
             command = _build_general_command(str(job_name), job_config)
+            lines.append(
+                f'{schedule} cd {job_config.get("repo") or normalized_project_root} && {command}'
+            )
+
+    # Process monitor jobs
+    for config_file in _iter_yaml_files(PATH_MONITOR_FOLDER):
+        if (
+            config_file.resolve() == Path(output_file).resolve()
+            or config_file.stem == 'example'
+        ):
+            continue
+
+        config_data = load_yaml(config_file) or {}
+        for job_name, job_config in config_data.items():
+            if not isinstance(job_config, dict):
+                continue
+            if not job_config.get('is_active', True):
+                continue
+
+            schedule = str(job_config.get('schedule', '')).strip()
+            if not schedule:
+                continue
+            logging = job_config.get('logging', {})
+            job_config['log_file'] = logging.get('log_file', config_file.stem)
+            job_config['append_log'] = logging.get(
+                'append_log', bool(job_config.get('log_file'))
+            )
+            command = _build_monitor_command(str(job_name), job_config)
             lines.append(
                 f'{schedule} cd {job_config.get("repo") or normalized_project_root} && {command}'
             )

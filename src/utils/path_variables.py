@@ -13,6 +13,7 @@ PATH_COMPILED_SERVICES_CATALOG = Path('./configs/cache/services-catalog.json')
 # Paths
 PATH_INGESTION_FOLDER = Path('./configs/ingestion')
 PATH_DDL_FOLDER = Path('./configs/ddl')
+PATH_MONITOR_FOLDER = Path('./configs/monitor')
 
 # SQLite
 SQLITE_DB_FOLDER = Path('./data')

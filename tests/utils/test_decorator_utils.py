@@ -317,7 +317,7 @@ class TestTimeoutDecorator:
 
 
 class TestIngestionAuditDecorator:
-    def test_audit_success_inserts_row_with_status_true(self):
+    def test_audit_success_inserts_then_updates_row(self):
         mock_sqlite = MagicMock()
 
         @ingestion_audit()
@@ -365,12 +365,16 @@ class TestIngestionAuditDecorator:
         mock_sqlite.insert_data.assert_called_once()
         inserted_row = mock_sqlite.insert_data.call_args.kwargs['data'][0]
         assert inserted_row['job_name'] == 'job_a'
-        assert inserted_row['status'] == 1
-        assert inserted_row['num_records'] == 3
         assert inserted_row['commit_hash'] == 'abc123'
         assert inserted_row['id']
         assert inserted_row['updated_config'] is None
         assert inserted_row['config_file'] == 'system_stats.yml'
+
+        mock_sqlite.upsert_data.assert_called_once()
+        updated_row = mock_sqlite.upsert_data.call_args.kwargs['data'][0]
+        assert updated_row['status'] == 1
+        assert updated_row['num_records'] == 3
+        assert updated_row['error'] is None
 
     def test_audit_failure_inserts_row_with_error(self):
         mock_sqlite = MagicMock()
@@ -418,10 +422,13 @@ class TestIngestionAuditDecorator:
         mock_sqlite.insert_data.assert_called_once()
         inserted_row = mock_sqlite.insert_data.call_args.kwargs['data'][0]
         assert inserted_row['job_name'] == 'job_b'
-        assert inserted_row['status'] == 0
-        assert 'ValueError' in inserted_row['error']
         assert inserted_row['updated_config'] is not None
         assert inserted_row['config_file'] == 'strava.yml'
+
+        mock_sqlite.upsert_data.assert_called_once()
+        updated_row = mock_sqlite.upsert_data.call_args.kwargs['data'][0]
+        assert updated_row['status'] == 0
+        assert 'ValueError' in updated_row['error']
 
 
 # ---------------------------------------------------------------------------

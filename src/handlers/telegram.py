@@ -10,7 +10,9 @@ log = get_logger(Path(__file__).stem)
 BASE_URL = 'https://api.telegram.org'
 
 
-def send_message(message: str, chat_id: str = None) -> None:
+def send_message(
+    message: str, chat_id: str = None, parse_mode: str = 'Markdown'
+) -> None:
     env_manager = EnvManager(ENV_FILE_HANDLERS)
     bot_token = env_manager.get('TELEGRAM_BOT_TOKEN')
     chat_id = chat_id or env_manager.get('TELEGRAM_CHAT_ID')
@@ -19,7 +21,7 @@ def send_message(message: str, chat_id: str = None) -> None:
     payload = {
         'chat_id': chat_id,
         'text': message,
-        'parse_mode': 'Markdown',
+        'parse_mode': parse_mode,
     }
 
     response = requests.post(url, json=payload)

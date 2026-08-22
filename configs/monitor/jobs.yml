@@ -1,0 +1,9 @@
+DELAYED_INGESTION_JOBS:
+  is_active: true
+  description: Notify delayed ingestion jobs
+  schedule: 0 23 * * *
+  handler: jobs
+  method: run_delayed
+  params:
+    type: ingestion
+  

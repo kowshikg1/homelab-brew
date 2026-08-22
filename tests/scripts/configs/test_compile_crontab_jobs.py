@@ -10,6 +10,7 @@ import yaml
 from src.scripts.configs.compile_crontab_jobs import (
     _build_general_command,
     _build_ingestion_command,
+    _build_monitor_command,
     _is_frequent_schedule,
     _iter_yaml_files,
     _slug,
@@ -65,7 +66,11 @@ def mock_defaults(tmp_path, mock_env):
                     'src.scripts.configs.compile_crontab_jobs.DEFAULT_LOG_FOLDER',
                     tmp_path / 'logs',
                 ):
-                    yield tmp_path
+                    with patch(
+                        'src.scripts.configs.compile_crontab_jobs.PATH_MONITOR_FOLDER',
+                        tmp_path / 'monitor',
+                    ):
+                        yield tmp_path
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +292,44 @@ class TestBuildIngestionCommand:
             assert '/tmp/docker-stats.lock' in result
             assert '>> ' in result
             assert 'logs/docker-cron.log 2>&1' in result
+
+
+# ---------------------------------------------------------------------------
+# _build_monitor_command
+# ---------------------------------------------------------------------------
+
+
+class TestBuildMonitorCommand:
+    def test_basic_monitor_command(self):
+        job_config = {'schedule': '0 2 * * *'}
+        result = _build_monitor_command('DELAYED_INGESTION_JOBS', job_config)
+        assert (
+            '.venv/bin/python -m src.monitor.base_monitor DELAYED_INGESTION_JOBS'
+            in result
+        )
+
+    def test_monitor_with_custom_python_bin(self):
+        job_config = {'schedule': '0 2 * * *', 'python_bin': '/usr/bin/python3'}
+        result = _build_monitor_command('CHECK_JOBS', job_config)
+        assert (
+            '/usr/bin/python3 -m src.monitor.base_monitor CHECK_JOBS' in result
+        )
+
+    def test_monitor_with_lock_and_logging(self):
+        job_config = {
+            'schedule': '*/5 * * * *',
+            'log_file': 'jobs',
+            'append_log': True,
+        }
+        with patch(
+            'src.scripts.configs.compile_crontab_jobs.DEFAULT_LOG_FOLDER',
+            Path('./logs'),
+        ):
+            result = _build_monitor_command('DELAYED', job_config)
+            assert '/usr/bin/flock -n' in result
+            assert '/tmp/delayed.lock' in result
+            assert '>> ' in result
+            assert 'logs/jobs-cron.log 2>&1' in result
 
 
 # ---------------------------------------------------------------------------
@@ -837,3 +880,113 @@ class TestCompileCrontabJobs:
 
         assert len(lines) == 1
         assert '/usr/bin/flock' not in lines[0]
+
+    def test_compiles_monitor_jobs_from_monitor_folder(
+        self, tmp_path, mock_defaults
+    ):
+        ingestion_config = tmp_path / 'ingestion_config.json'
+        _write_json(ingestion_config, {})
+
+        monitor_folder = tmp_path / 'monitor'
+        _write_yaml(
+            monitor_folder / 'jobs.yml',
+            {
+                'DELAYED_INGESTION_JOBS': {
+                    'is_active': True,
+                    'schedule': '0 23 * * *',
+                    'handler': 'jobs',
+                    'method': 'run_delayed',
+                }
+            },
+        )
+
+        with patch(
+            'src.scripts.configs.compile_crontab_jobs.PATH_MONITOR_FOLDER',
+            monitor_folder,
+        ):
+            lines = compile_crontab_jobs(
+                compiled_ingestion_file=ingestion_config,
+                general_jobs_folder=tmp_path / 'crontab',
+                output_file=tmp_path / 'compiled.crontab',
+                project_root=tmp_path,
+            )
+
+        assert len(lines) == 1
+        assert 'src.monitor.base_monitor DELAYED_INGESTION_JOBS' in lines[0]
+
+    def test_skips_inactive_monitor_jobs(self, tmp_path, mock_defaults):
+        ingestion_config = tmp_path / 'ingestion_config.json'
+        _write_json(ingestion_config, {})
+
+        monitor_folder = tmp_path / 'monitor'
+        _write_yaml(
+            monitor_folder / 'jobs.yml',
+            {
+                'ACTIVE_JOB': {
+                    'is_active': True,
+                    'schedule': '0 23 * * *',
+                    'handler': 'jobs',
+                },
+                'INACTIVE_JOB': {
+                    'is_active': False,
+                    'schedule': '0 23 * * *',
+                    'handler': 'jobs',
+                },
+            },
+        )
+
+        with patch(
+            'src.scripts.configs.compile_crontab_jobs.PATH_MONITOR_FOLDER',
+            monitor_folder,
+        ):
+            lines = compile_crontab_jobs(
+                compiled_ingestion_file=ingestion_config,
+                general_jobs_folder=tmp_path / 'crontab',
+                output_file=tmp_path / 'compiled.crontab',
+                project_root=tmp_path,
+            )
+
+        assert len(lines) == 1
+        assert 'ACTIVE_JOB' in lines[0]
+        assert 'INACTIVE_JOB' not in lines[0]
+
+    def test_skips_example_monitor_file(self, tmp_path, mock_defaults):
+        ingestion_config = tmp_path / 'ingestion_config.json'
+        _write_json(ingestion_config, {})
+
+        monitor_folder = tmp_path / 'monitor'
+        _write_yaml(
+            monitor_folder / 'example.yml',
+            {
+                'EXAMPLE_JOB': {
+                    'is_active': True,
+                    'schedule': '0 23 * * *',
+                    'handler': 'jobs',
+                }
+            },
+        )
+        _write_yaml(
+            monitor_folder / 'jobs.yml',
+            {
+                'REAL_JOB': {
+                    'is_active': True,
+                    'schedule': '0 23 * * *',
+                    'handler': 'jobs',
+                }
+            },
+        )
+
+        with patch(
+            'src.scripts.configs.compile_crontab_jobs.PATH_MONITOR_FOLDER',
+            monitor_folder,
+        ):
+            lines = compile_crontab_jobs(
+                compiled_ingestion_file=ingestion_config,
+                general_jobs_folder=tmp_path / 'crontab',
+                output_file=tmp_path / 'compiled.crontab',
+                project_root=tmp_path,
+            )
+
+        assert len(lines) == 1
+        assert 'REAL_JOB' in lines[0]
+        assert 'EXAMPLE_JOB' not in lines[0]
